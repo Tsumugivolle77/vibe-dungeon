@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://bw58aawl3hpr1"]
+
+[ext_resource type="PackedScene" path="res://scenes/MainMenu.tscn" id="1"]
+
+[node name="Main" type="Node" unique_id=1305994970]
+
+[node name="MainMenu" parent="." unique_id=985159132 instance=ExtResource("1")]
+layout_mode = 3
+anchors_preset = 15
+offset_left = 810.0
+offset_top = 1037.0
+offset_right = 810.0
+offset_bottom = 1037.0
+grow_horizontal = 2
+grow_vertical = 2

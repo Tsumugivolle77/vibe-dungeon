@@ -1,0 +1,51 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/GameOver.gd" id="1"]
+
+[node name="GameOver" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1")
+
+[node name="Bg" type="ColorRect" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.05, 0.02, 0.02, 0.92)
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_right = 180.0
+offset_top = -150.0
+offset_bottom = 150.0
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+alignment = 1
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Panel/VBox"]
+text = "游戏结束"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 40
+theme_override_colors/font_color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="ScoreLabel" type="Label" parent="Panel/VBox"]
+text = "最终分数: 0"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 22
+
+[node name="Spacer" type="Control" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 16)
+
+[node name="RetryButton" type="Button" parent="Panel/VBox"]
+text = "再试一次"
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
+
+[node name="MenuButton" type="Button" parent="Panel/VBox"]
+text = "主菜单"
+custom_minimum_size = Vector2(200, 48)
+theme_override_font_sizes/font_size = 20
