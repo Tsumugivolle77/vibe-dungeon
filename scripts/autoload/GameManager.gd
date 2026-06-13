@@ -15,9 +15,7 @@ var score: int = 0
 var gold:  int = 0
 var player_ref: Node = null
 
-func _process(_delta: float):
-	if state == GameState.PLAYING and Input.is_action_just_pressed("ui_cancel"):
-		toggle_pause()
+# Pause is owned by PauseMenu (handles Esc + focus-out + the overlay UI).
 
 func start_game():
 	state = GameState.PLAYING

@@ -1,10 +1,11 @@
 extends Area2D
 
-var direction: Vector2   = Vector2.RIGHT
-var speed: float         = 400.0
-var damage: float        = 15.0
-var lifetime: float      = 3.0
+var direction: Vector2       = Vector2.RIGHT
+var speed: float             = 400.0
+var damage: float            = 15.0
+var lifetime: float          = 3.0
 var weapon_props: Dictionary = {}
+var weapon_id: String        = "pistol"
 
 var _age: float = 0.0
 var _hit: bool  = false
@@ -14,15 +15,68 @@ func _ready():
 	add_to_group("player_bullet")
 	area_entered.connect(_on_area)
 	body_entered.connect(_on_body)
-	# Visual colour based on element
-	var elem = weapon_props.get("element", "")
-	var col: Color = Color.YELLOW
-	match elem:
-		"fire":      col = Color(1.0, 0.4, 0.1)
-		"ice":       col = Color(0.4, 0.8, 1.0)
-		"lightning": col = Color(0.9, 0.9, 0.2)
-		"plasma":    col = Color(0.5, 0.2, 1.0)
-		"holy":      col = Color(1.0, 0.95, 0.6)
+	_setup_visual()
+
+func _setup_visual():
+	var elem: String = weapon_props.get("element", "")
+	var col := Color(1.00, 0.92, 0.65)  # default warm yellow
+
+	# Weapon-specific shape scale (collision unaffected — only $Visual is scaled)
+	match weapon_id:
+		"sniper", "railgun":
+			$Visual.scale = Vector2(2.8, 0.35)   # long thin needle
+		"void_cannon":
+			$Visual.scale = Vector2(2.0, 2.0)    # large orb
+		"laser_gun":
+			$Visual.scale = Vector2(3.5, 0.25)   # ultra-thin beam segment
+		"bow", "crossbow", "thunder_bow":
+			$Visual.scale = Vector2(2.4, 0.38)   # arrow shaft
+		"rocket_launcher", "grenade_launcher":
+			$Visual.scale = Vector2(1.8, 1.3)    # rocket
+		"boomerang":
+			$Visual.scale = Vector2(1.6, 1.6)    # chunky disc
+		"smg", "machine_gun", "minigun", "shotgun":
+			$Visual.scale = Vector2(0.72, 0.72)  # small pellet
+		"fire_staff", "ice_staff", "lightning_staff", "holy_staff":
+			$Visual.scale = Vector2(1.35, 1.35)  # glowing magic orb
+
+	# Weapon-specific color when no element override
+	if elem.is_empty():
+		match weapon_id:
+			"pistol":
+				col = Color(1.00, 0.92, 0.65)
+			"revolver":
+				col = Color(1.00, 0.82, 0.40)
+			"smg", "machine_gun", "minigun":
+				col = Color(0.82, 0.88, 0.94)
+			"shotgun":
+				col = Color(0.95, 0.80, 0.40)
+			"sniper":
+				col = Color(0.55, 0.88, 1.00)
+			"railgun":
+				col = Color(0.20, 0.95, 1.00)
+			"void_cannon":
+				col = Color(0.42, 0.10, 0.72)
+			"laser_gun":
+				col = Color(0.15, 0.95, 0.90)
+			"bow", "crossbow":
+				col = Color(0.62, 0.40, 0.12)
+			"thunder_bow":
+				col = Color(0.88, 0.88, 0.20)
+			"rocket_launcher":
+				col = Color(0.90, 0.48, 0.18)
+			"grenade_launcher":
+				col = Color(0.55, 0.72, 0.20)
+			"boomerang":
+				col = Color(0.72, 0.52, 0.18)
+	else:
+		match elem:
+			"fire":      col = Color(1.00, 0.42, 0.10)
+			"ice":       col = Color(0.38, 0.78, 1.00)
+			"lightning": col = Color(0.92, 0.92, 0.22)
+			"plasma":    col = Color(0.50, 0.18, 1.00)
+			"holy":      col = Color(1.00, 0.95, 0.62)
+
 	$Visual.color = col
 
 func _process(delta: float):
@@ -38,6 +92,25 @@ func _process(delta: float):
 		_find_homing_target()
 
 	position += direction * speed * delta
+
+	if weapon_props.get("trail") and Engine.get_frames_drawn() % 2 == 0:
+		_spawn_trail()
+
+func _spawn_trail():
+	if not is_inside_tree():
+		return
+	var dot := ColorRect.new()
+	var c: Color = $Visual.color
+	c.a = 0.55
+	dot.color = c
+	var sz := randf_range(3.0, 6.0)
+	dot.size = Vector2(sz, sz)
+	dot.global_position = global_position - dot.size * 0.5
+	get_parent().add_child(dot)
+	var tw := dot.create_tween()
+	tw.tween_property(dot, "scale", Vector2(0.2, 0.2), 0.3)
+	tw.parallel().tween_property(dot, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(dot.queue_free)
 
 func _find_homing_target():
 	var enemies = get_tree().get_nodes_in_group("enemy")

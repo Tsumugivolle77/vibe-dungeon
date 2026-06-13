@@ -1,221 +1,79 @@
 extends RefCounted
 class_name RoomGenerator
 
-# Grid encoding: W=wall, .=floor, L=left door, R=right door, U=up door, D=down door
-# Room grid is COLS x ROWS tiles, each tile 64x64 px
-# Every row must be exactly COLS (20) characters.
-# Door rules: L at col 0 → col 1 must be floor; R at col 19 → col 18 must be floor.
+# Procedurally builds a rectangular room of a given tile size with door openings
+# at the MIDPOINTS of chosen edges. Rooms are connected by corridors (roads) that
+# the Level lays between adjacent edge-midpoint doors.
+#
+# Returned dictionary:
+#   cols, rows         : size in tiles
+#   floors             : Array[Vector2i] walkable interior + door-opening tiles
+#   walls              : Array[Vector2i] solid border tiles (minus openings)
+#   door_tiles         : { "left"/"right"/"up"/"down" : Array[Vector2i] } opening tiles
+#   spawn_points       : Array[Vector2i] safe interior tiles (margin from walls)
+#   center             : Vector2i centre tile
 
 const TILE_SIZE: int = 64
-const COLS: int      = 20
-const ROWS: int      = 12
+const DOOR_HALF: int = 1   # opening spans 2 tiles centred on the edge midpoint
 
-# 10 hand-crafted templates, each row exactly 20 chars.
-# Templates 0-8 are normal rooms; template 9 is the boss arena.
-const TEMPLATES: Array = [
-	# Template 0 – open arena (simplest)
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W..................W",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W..................W",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 1 – central pillars
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W....WW......WW....W",
-		"W....WW......WW....W",
-		"W....WW......WW....W",
-		"L..................R",
-		"W....WW......WW....W",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 2 – horizontal barrier walls (barriers between door rows)
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W...WWWWWWWWWWWW...W",
-		"W...WWWWWWWWWWWW...W",
-		"W..................W",
-		"L..................R",
-		"W...WWWWWWWWWWWW...W",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 3 – L-shape (bottom-right quarter cut off)
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W..........WWWWWWWWW",
-		"W..........WWWWWWWWW",
-		"W..........WWWWWWWWW",
-		"L..........WWWWWWWWW",
-		"W..........WWWWWWWWW",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 4 – vertical centre divider (connected at top and bottom)
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W........W.........W",
-		"L........W.........R",
-		"W........W.........W",
-		"W........W.........W",
-		"W........W.........W",
-		"L........W.........R",
-		"W........W.........W",
-		"W........W.........W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 5 – maze-like barriers
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W.WWWWWWWWW.WWWWWW.W",
-		"L..................R",
-		"W.WWWWWWWWW.WWWWWW.W",
-		"W..........W.......W",
-		"W..........W.......W",
-		"L..........W.......R",
-		"W.WWWWWWWWW........W",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 6 – inner chamber (accessible via open top row)
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W....W........W....W",
-		"L....W........W....R",
-		"W....W........W....W",
-		"W....WWWWWWWWWW....W",
-		"W..................W",
-		"L..................R",
-		"W..................W",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 7 – grid of pillar pairs
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..WW..WW..WW..WW..W",
-		"L..................R",
-		"W..WW..WW..WW..WW..W",
-		"W..................W",
-		"W..................W",
-		"L..WW..WW..WW..WW..R",
-		"W..WW..WW..WW..WW..W",
-		"W..................W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 8 – upper barrier wall with gaps
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..WWWWWWWWWWWWWW..W",
-		"W..WWWWWWWWWWWWWW..W",
-		"L..................R",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W..................W",
-		"W..WWWWWWWWWWWWWW..W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-	# Template 9 – boss arena (large open, corner pillars)
-	[
-		"WWWWWWWWWWWWWWWWWWWW",
-		"W..................W",
-		"W..W............W..W",
-		"L..................R",
-		"W..W............W..W",
-		"W..................W",
-		"W..................W",
-		"W..................W",
-		"L..................R",
-		"W..W............W..W",
-		"W..................W",
-		"WWWWWWWWWWWWWWWWWWWW",
-	],
-]
+static func generate(cols: int, rows: int, doors: Dictionary) -> Dictionary:
+	var floors: Array          = []
+	var walls: Array           = []
+	var door_tiles: Dictionary = {"left": [], "right": [], "up": [], "down": []}
+	var spawn_points: Array     = []
 
-static func get_template(index: int) -> Array:
-	return TEMPLATES[clamp(index, 0, TEMPLATES.size() - 1)]
+	var mid_c: int = cols / 2
+	var mid_r: int = rows / 2
 
-static func get_random_template() -> Array:
-	# Templates 0-8 are combat rooms; template 9 is boss only
-	return TEMPLATES[randi() % (TEMPLATES.size() - 1)]
+	# Collect opening tiles (border tiles that are passable) keyed for quick lookup.
+	var openings: Dictionary = {}
+	if doors.get("left", false):
+		for r in range(mid_r - DOOR_HALF, mid_r + DOOR_HALF):
+			var t := Vector2i(0, r)
+			openings[t] = true
+			door_tiles["left"].append(t)
+	if doors.get("right", false):
+		for r in range(mid_r - DOOR_HALF, mid_r + DOOR_HALF):
+			var t := Vector2i(cols - 1, r)
+			openings[t] = true
+			door_tiles["right"].append(t)
+	if doors.get("up", false):
+		for c in range(mid_c - DOOR_HALF, mid_c + DOOR_HALF):
+			var t := Vector2i(c, 0)
+			openings[t] = true
+			door_tiles["up"].append(t)
+	if doors.get("down", false):
+		for c in range(mid_c - DOOR_HALF, mid_c + DOOR_HALF):
+			var t := Vector2i(c, rows - 1)
+			openings[t] = true
+			door_tiles["down"].append(t)
 
-static func get_boss_template() -> Array:
-	return TEMPLATES[TEMPLATES.size() - 1]
+	for y in rows:
+		for x in cols:
+			var t := Vector2i(x, y)
+			var is_border: bool = (x == 0 or x == cols - 1 or y == 0 or y == rows - 1)
+			if is_border and not openings.has(t):
+				walls.append(t)
+			else:
+				floors.append(t)
 
-static func parse_template(template: Array) -> Dictionary:
-	var walls: Array        = []
-	var floors: Array       = []
-	var doors: Dictionary   = {"up": [], "down": [], "left": [], "right": []}
-	var spawn_points: Array = []
-
-	for row in template.size():
-		var line: String = template[row]
-		for col in line.length():
-			var ch       = line[col]
-			var tile_pos = Vector2i(col, row)
-			match ch:
-				"W": walls.append(tile_pos)
-				".":
-					floors.append(tile_pos)
-				"L":
-					floors.append(tile_pos)
-					doors["left"].append(tile_pos)
-				"R":
-					floors.append(tile_pos)
-					doors["right"].append(tile_pos)
-				"U":
-					floors.append(tile_pos)
-					doors["up"].append(tile_pos)
-				"D":
-					floors.append(tile_pos)
-					doors["down"].append(tile_pos)
-
-	# Spawn points: mid-room floor tiles (avoid edges and door columns)
-	for f in floors:
-		if f.x > 3 and f.x < COLS - 3 and f.y > 2 and f.y < ROWS - 2:
-			if randf() < 0.09:
-				spawn_points.append(f)
+	# Spawn points: interior tiles kept two tiles away from every wall, so monsters
+	# never appear inside or hugging an impassable border.
+	for y in range(2, rows - 2):
+		for x in range(2, cols - 2):
+			spawn_points.append(Vector2i(x, y))
 
 	return {
-		"walls":        walls,
+		"cols":         cols,
+		"rows":         rows,
 		"floors":       floors,
-		"doors":        doors,
+		"walls":        walls,
+		"door_tiles":   door_tiles,
 		"spawn_points": spawn_points,
+		"center":       Vector2i(mid_c, mid_r),
 	}
 
+# Local (room-relative) centre of a tile in pixels.
 static func tile_to_world(tile: Vector2i) -> Vector2:
 	return Vector2(tile.x * TILE_SIZE + TILE_SIZE * 0.5,
-	               tile.y * TILE_SIZE + TILE_SIZE * 0.5)
+				   tile.y * TILE_SIZE + TILE_SIZE * 0.5)

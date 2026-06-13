@@ -1,5 +1,7 @@
 extends EnemyBase
 
+func _get_pixel_texture(): return PixelArt.make_elite_goblin()
+
 @export var shield_arc: float     = 90.0  # degrees, front-facing shield
 @export var attack_range: float   = 55.0
 @export var attack_cooldown: float = 1.0
@@ -38,6 +40,7 @@ func _on_die_extra():
 func _on_ready_extra():
 	max_hp      = 90.0
 	hp          = max_hp
+	is_elite    = true
 	move_speed   = 75.0
 	damage      = 18.0
 	xp_value    = 20

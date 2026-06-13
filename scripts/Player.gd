@@ -2,7 +2,7 @@ extends CharacterBody2D
 
 signal health_changed(hp: int, max_hp: int)
 signal weapon_changed(weapon: Dictionary)
-signal ammo_changed(current: int, maximum: int)
+signal energy_changed(current: int, maximum: int)
 signal skill_activated(duration: float)
 signal skill_cooldown(remaining: float, total: float)
 signal died
@@ -15,11 +15,14 @@ const SWITCH_DELAY     = 0.1
 const IFRAMES_DURATION = 0.5
 const MAX_WEAPONS      = 2
 const INTERACT_RANGE   = 60.0
+const MAX_ENERGY       = 200
 
 var max_hp: int = 100
 var hp: int     = 100
 var alive: bool = true
 var invincible: bool = false
+
+var energy: int = MAX_ENERGY
 
 var weapon_ids: Array     = ["pistol"]
 var weapon_idx: int       = 0
@@ -36,28 +39,42 @@ var skill_cd: float    = 0.0
 var is_melee_attacking: bool = false
 var melee_timer: float       = 0.0
 
-@onready var weapon_pivot: Node2D  = $WeaponPivot
+# Emergency punch — activated when energy too low to fire any weapon
+const PUNCH_DAMAGE   = 7.0
+const PUNCH_RANGE    = 40.0
+const PUNCH_COOLDOWN = 0.55
+var _punch_cd: float = 0.0
+
+@onready var weapon_pivot: Node2D     = $WeaponPivot
 @onready var weapon_visual: ColorRect = $WeaponPivot/WeaponVisual
-@onready var melee_hitbox: Area2D  = $WeaponPivot/MeleeHitbox
-@onready var camera: Camera2D      = $Camera2D
+@onready var melee_hitbox: Area2D    = $WeaponPivot/MeleeHitbox
+@onready var camera: Camera2D        = $Camera2D
 
 var bullet_scene: PackedScene = preload("res://scenes/bullets/Bullet.tscn")
-var _pixel_sprite: Sprite2D = null
+var _anim_sprite: AnimatedSprite2D = null
+var _weapon_sprite: Sprite2D = null
 
 func _ready():
 	add_to_group("player")
 	melee_hitbox.monitoring = false
-	melee_hitbox.area_entered.connect(_on_melee_area)
-	melee_hitbox.body_entered.connect(_on_melee_body)
 	GameManager.player_ref = self
+
+	# Held-weapon sprite replaces the plain WeaponVisual rectangle
+	weapon_visual.visible = false
+	_weapon_sprite = Sprite2D.new()
+	_weapon_sprite.position = Vector2(22, 0)
+	_weapon_sprite.z_index = 2
+	weapon_pivot.add_child(_weapon_sprite)
+
 	_equip(weapon_ids[0])
 
-	# Pixel art sprite
-	_pixel_sprite = PixelArt.sprite_from(PixelArt.make_knight())
-	_pixel_sprite.z_index = 1
-	add_child(_pixel_sprite)
-	$Body.visible   = false
-	$Head.visible   = false
+	_anim_sprite = AnimatedSprite2D.new()
+	_anim_sprite.sprite_frames = PixelArt.make_loli_frames()
+	_anim_sprite.play("idle")
+	_anim_sprite.z_index = 1
+	add_child(_anim_sprite)
+	$Body.visible = false
+	$Head.visible = false
 
 func _physics_process(delta: float):
 	if not alive:
@@ -74,13 +91,20 @@ func _move():
 	var dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	velocity = dir * SPEED
 	move_and_slide()
-	# Flip sprite
-	if _pixel_sprite and dir.x != 0:
-		_pixel_sprite.flip_h = dir.x < 0
+	if _anim_sprite:
+		if dir.length() > 0.1:
+			_anim_sprite.play("walk")
+			if dir.x != 0:
+				_anim_sprite.flip_h = dir.x < 0
+		else:
+			_anim_sprite.play("idle")
 
 func _aim():
 	var aim = (get_global_mouse_position() - global_position)
 	weapon_pivot.rotation = aim.angle()
+	# Flip the held weapon vertically when aiming left so it never appears upside-down
+	if _weapon_sprite:
+		_weapon_sprite.flip_v = abs(weapon_pivot.rotation) > PI * 0.5
 
 func _handle_switch(delta: float):
 	if switch_timer > 0.0:
@@ -100,15 +124,16 @@ func _cycle(dir: int):
 
 func _equip(id: String):
 	weapon = WeaponDatabase.get_weapon(id)
-	fire_timer     = 0.0
-	windup_timer   = 0.0
+	fire_timer      = 0.0
+	windup_timer    = 0.0
 	is_windup_ready = false
 	is_melee_attacking = false
 	melee_hitbox.monitoring = false
 	weapon_visual.color = weapon.get("color", Color.WHITE)
+	if _weapon_sprite:
+		_weapon_sprite.texture = PixelArt.make_weapon_icon(id)
 	emit_signal("weapon_changed", weapon)
-	if weapon.get("type") == "ranged":
-		emit_signal("ammo_changed", weapon.ammo, weapon.ammo_max)
+	emit_signal("energy_changed", energy, MAX_ENERGY)
 
 func _handle_fire(delta: float):
 	if fire_timer > 0.0:
@@ -121,16 +146,108 @@ func _handle_fire(delta: float):
 			windup_timer    = 0.0
 			is_windup_ready = false
 		return
+
+	var cost: int = weapon.get("energy_cost", 0)
+	# When weapon costs energy and player is dry, offer the emergency punch instead
+	if cost > 0 and energy < cost:
+		if Input.is_action_just_pressed("fire") and _punch_cd <= 0.0:
+			_emergency_punch()
+		return
+
 	if weapon.get("type") == "melee":
 		_melee_attack()
 	else:
 		_fire_ranged(delta)
 
 func _melee_attack():
+	var cost: int = weapon.get("energy_cost", 0)
+	if energy < cost:
+		return
+	_spend_energy(cost)
 	is_melee_attacking = true
-	melee_hitbox.monitoring = true
-	melee_timer = 0.3
+	melee_timer = 0.25
 	fire_timer  = 1.0 / weapon.fire_rate
+	_melee_sector_hit()
+	_melee_slash_visual()
+
+# True fan-shaped (扇形) hit: everything inside the weapon's range AND within the
+# arc half-angle of the aim direction is struck at once — reliable, no sweep gaps.
+func _melee_sector_hit():
+	var arc: float  = deg_to_rad(weapon.get("arc", 90.0))
+	var rng: float  = weapon.get("range", 80.0)
+	var half: float = arc * 0.5
+	var aim: float  = weapon_pivot.rotation
+	var dmg: float  = weapon.damage * (2.0 if skill_active else 1.0)
+	var kb: float   = weapon.get("props", {}).get("knockback", 150.0)
+
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var to_e: Vector2 = e.global_position - global_position
+		if to_e.length() > rng + 16.0:
+			continue
+		if absf(angle_difference(aim, to_e.angle())) > half:
+			continue
+		if e.has_method("take_damage"):
+			e.take_damage(dmg, to_e.normalized() * kb)
+
+	for c in get_tree().get_nodes_in_group("crate"):
+		if not is_instance_valid(c):
+			continue
+		var to_c: Vector2 = c.global_position - global_position
+		if to_c.length() > rng + 16.0 or absf(angle_difference(aim, to_c.angle())) > half:
+			continue
+		if c.has_method("take_damage"):
+			c.take_damage(dmg)
+
+	if weapon.get("can_cancel_bullets", false):
+		for b in get_tree().get_nodes_in_group("enemy_bullet"):
+			if not is_instance_valid(b):
+				continue
+			var to_b: Vector2 = b.global_position - global_position
+			if to_b.length() <= rng + 8.0 and absf(angle_difference(aim, to_b.angle())) <= half:
+				b.queue_free()
+
+# A crescent "blade sweep" that fills the arc, with a bright cutting edge, a small
+# swing motion and a quick fade — reads as a slash (砍击) rather than a thin line.
+func _melee_slash_visual():
+	var arc: float  = deg_to_rad(weapon.get("arc", 90.0))
+	var rng: float  = weapon.get("range", 80.0)
+	var half: float = arc * 0.5
+	var col: Color  = weapon.get("color", Color.WHITE)
+	var r_in: float = rng * 0.5
+	var steps := 16
+
+	var poly := Polygon2D.new()
+	var pts := PackedVector2Array()
+	for i in steps + 1:                                   # outer arc, +half → -half
+		var a: float = lerp(half, -half, float(i) / steps)
+		pts.append(Vector2(cos(a), sin(a)) * rng)
+	for i in steps + 1:                                   # inner arc back, -half → +half
+		var a: float = lerp(-half, half, float(i) / steps)
+		pts.append(Vector2(cos(a), sin(a)) * r_in)
+	poly.polygon = pts
+	poly.color   = Color(col.r, col.g, col.b, 0.5)
+	weapon_pivot.add_child(poly)
+
+	var edge := Line2D.new()                              # bright cutting edge
+	edge.width = 5.0
+	edge.default_color = Color(1, 1, 1, 0.95)
+	edge.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	edge.end_cap_mode   = Line2D.LINE_CAP_ROUND
+	for i in steps + 1:
+		var a: float = lerp(-half, half, float(i) / steps)
+		edge.add_point(Vector2(cos(a), sin(a)) * rng)
+	weapon_pivot.add_child(edge)
+
+	for node in [poly, edge]:
+		node.rotation = -arc * 0.1
+		node.scale    = Vector2(0.92, 0.92)
+		var tw := node.create_tween()
+		tw.tween_property(node, "rotation", arc * 0.1, 0.16)
+		tw.parallel().tween_property(node, "scale", Vector2(1.05, 1.05), 0.16)
+		tw.parallel().tween_property(node, "modulate:a", 0.0, 0.22)
+		tw.tween_callback(node.queue_free)
 
 func _fire_ranged(delta: float):
 	var props: Dictionary = weapon.get("props", {})
@@ -141,15 +258,22 @@ func _fire_ranged(delta: float):
 		if not is_windup_ready:
 			return
 
-	var ammo_val: int = weapon.get("ammo", 0)
-	if ammo_val <= 0:
+	var cost: int = weapon.get("energy_cost", 0)
+	if energy < cost:
 		return
 
-	var count: int   = weapon.get("bullet_count", 1)
+	var base_count: int = weapon.get("bullet_count", 1)
 	var spread: float = deg_to_rad(weapon.get("spread", 0.0))
 	var aim_ang: float = weapon_pivot.rotation
-	var spd: float   = weapon.get("bullet_speed", 400.0)
-	var dmg: float   = weapon.get("damage", 10.0) * (2.0 if skill_active else 1.0)
+	var spd: float    = weapon.get("bullet_speed", 400.0)
+	var dmg: float    = weapon.get("damage", 10.0)
+
+	# Skill: fire double the bullets, fanned out with spacing between them.
+	var count := base_count
+	if skill_active:
+		count = base_count * 2
+		# Guarantee a visible fan even for single-shot weapons.
+		spread = max(spread, deg_to_rad(16.0))
 
 	for i in count:
 		var angle = aim_ang
@@ -160,15 +284,22 @@ func _fire_ranged(delta: float):
 		var b: Node = bullet_scene.instantiate()
 		get_parent().add_child(b)
 		b.global_position = global_position + Vector2(cos(aim_ang), sin(aim_ang)) * 32.0
-		b.direction = Vector2(cos(angle), sin(angle))
-		b.speed     = spd
-		b.damage    = dmg
+		b.direction    = Vector2(cos(angle), sin(angle))
+		b.speed        = spd
+		b.damage       = dmg
 		b.weapon_props = props.duplicate()
+		b.weapon_id    = weapon.get("id", "pistol")
 
-	weapon.ammo -= 1
-	WeaponDatabase.weapons[weapon.get("id", "")].ammo = weapon.ammo
+	_spend_energy(cost)
 	fire_timer = 1.0 / weapon.fire_rate
-	emit_signal("ammo_changed", weapon.ammo, weapon.ammo_max)
+
+func _spend_energy(amount: int):
+	energy = max(0, energy - amount)
+	emit_signal("energy_changed", energy, MAX_ENERGY)
+
+func restore_energy(amount: int):
+	energy = min(MAX_ENERGY, energy + amount)
+	emit_signal("energy_changed", energy, MAX_ENERGY)
 
 func _handle_skill(delta: float):
 	if skill_cd > 0.0:
@@ -241,50 +372,60 @@ func _try_shop_interact():
 
 func _do_pick_up_weapon(id: String):
 	if weapon_ids.has(id):
-		WeaponDatabase.restore_ammo(id)
 		return
 	if weapon_ids.size() < MAX_WEAPONS:
 		weapon_ids.append(id)
-		WeaponDatabase.restore_ammo(id)
-		# Switch to new weapon
 		weapon_idx = weapon_ids.size() - 1
 		_equip(id)
 	else:
-		# Drop current, pick up new
 		var dropped_id = weapon_ids[weapon_idx]
 		emit_signal("weapon_dropped", dropped_id, global_position)
 		weapon_ids[weapon_idx] = id
-		WeaponDatabase.restore_ammo(id)
 		_equip(id)
 
 func pick_up_weapon(id: String):
 	_do_pick_up_weapon(id)
 
+func _emergency_punch():
+	_punch_cd = PUNCH_COOLDOWN
+	var aim_ang: float = weapon_pivot.rotation
+	# Arc sweep visual — 7 particles spread over ±55°
+	for i in 7:
+		var t_frac = float(i) / 6.0
+		var angle  = aim_ang + lerp(-deg_to_rad(55.0), deg_to_rad(55.0), t_frac)
+		var dist   = randf_range(18.0, PUNCH_RANGE)
+		var cr     = ColorRect.new()
+		cr.color   = Color(1.0, 0.82, 0.28, 0.80)
+		var sz     = randf_range(5.0, 9.0)
+		cr.size    = Vector2(sz, sz)
+		cr.global_position = global_position + Vector2(cos(angle), sin(angle)) * dist - cr.size * 0.5
+		get_parent().add_child(cr)
+		var tw = cr.create_tween()
+		tw.tween_property(cr, "modulate:a", 0.0, 0.22)
+		tw.tween_callback(cr.queue_free)
+
+	# Damage enemies within the arc
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var to_e = e.global_position - global_position
+		if to_e.length() > PUNCH_RANGE:
+			continue
+		var angle_diff = abs(to_e.angle() - aim_ang)
+		if angle_diff > PI:
+			angle_diff = TAU - angle_diff
+		if angle_diff > deg_to_rad(60.0):
+			continue
+		if e.has_method("take_damage"):
+			e.take_damage(PUNCH_DAMAGE, to_e.normalized() * 60.0)
+
 func _tick_timers(delta: float):
+	if _punch_cd > 0.0:
+		_punch_cd -= delta
 	if melee_timer > 0.0:
 		melee_timer -= delta
 		if melee_timer <= 0.0:
 			is_melee_attacking = false
-			melee_hitbox.monitoring = false
-
-func _on_melee_area(area: Area2D):
-	if area.is_in_group("enemy_bullet") and weapon.get("can_cancel_bullets", false):
-		area.queue_free()
-		return
-	if area.is_in_group("enemy_hitbox"):
-		var e = area.get_parent()
-		if e.has_method("take_damage"):
-			var dmg: float = weapon.damage * (2.0 if skill_active else 1.0)
-			var kb: float  = weapon.get("props", {}).get("knockback", 150.0)
-			e.take_damage(dmg, (e.global_position - global_position).normalized() * kb)
-
-func _on_melee_body(body: Node2D):
-	if body.is_in_group("crate") and body.has_method("take_damage"):
-		body.take_damage(weapon.damage * (2.0 if skill_active else 1.0))
-		return
-	if body.is_in_group("enemy") and body.has_method("take_damage"):
-		body.take_damage(weapon.damage * (2.0 if skill_active else 1.0),
-			(body.global_position - global_position).normalized() * 150.0)
 
 func take_damage(amount: float):
 	if invincible or not alive:

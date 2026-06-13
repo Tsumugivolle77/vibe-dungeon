@@ -1,5 +1,7 @@
 extends EnemyBase
 
+func _get_pixel_texture(): return PixelArt.make_fairy()
+
 @export var fly_height: float    = -20.0  # Y offset (visual only)
 @export var preferred_dist: float = 200.0
 @export var fire_cooldown: float  = 0.6

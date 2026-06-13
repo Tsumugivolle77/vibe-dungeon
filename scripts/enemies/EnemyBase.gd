@@ -14,10 +14,17 @@ signal died(position: Vector2, xp: int)
 
 var is_boss_mode: bool = false
 var boss_scale: float  = 1.8
+var is_elite: bool     = false   # only elite monsters drop energy orbs ("子弹")
 
 var hp: float     = 0.0
 var alive: bool   = true
 var knockback_vel: Vector2 = Vector2.ZERO
+
+# Floating health bar (created lazily on first hit)
+const HP_BAR_W = 32.0
+const HP_BAR_H = 4.0
+var _hp_bar_bg: ColorRect   = null
+var _hp_bar_fill: ColorRect = null
 
 var slow_factor: float = 1.0
 var slow_timer:  float = 0.0
@@ -25,6 +32,7 @@ var dot_damage:  float = 0.0
 var dot_timer:   float = 0.0
 
 var player: Node2D = null
+var sprite: Sprite2D = null  # pixel-art overlay (set when _get_pixel_texture returns a texture)
 
 @onready var nav_agent: NavigationAgent2D = $NavigationAgent2D
 @onready var hitbox: Area2D               = $Hitbox
@@ -43,9 +51,9 @@ func _ready():
 	# Pixel sprite overlay (sits above the ColorRect fallback)
 	var tex = _get_pixel_texture()
 	if tex:
-		var spr = PixelArt.sprite_from(tex)
-		spr.z_index = 1
-		add_child(spr)
+		sprite = PixelArt.sprite_from(tex)
+		sprite.z_index = 1
+		add_child(sprite)
 		body_rect.visible = false  # hide plain rect when we have art
 
 	if is_boss_mode:
@@ -128,12 +136,44 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dicti
 		return
 	hp -= amount
 	knockback_vel = knockback
-	# Also damage any crate we might be (not applicable – but pass-through for bullets hitting crates)
-	body_rect.modulate = Color.RED
-	var t = create_tween()
-	t.tween_property(body_rect, "modulate", Color.WHITE, 0.15)
+	_flash_hit()
+	_update_hp_bar()
 	if hp <= 0.0:
 		_die()
+
+# Brief red flash on the visible sprite (falls back to the plain rect).
+func _flash_hit():
+	var target: CanvasItem = sprite if sprite else body_rect
+	if not is_instance_valid(target):
+		return
+	target.modulate = Color(1.8, 0.35, 0.35)
+	var t = create_tween()
+	t.tween_property(target, "modulate", Color.WHITE, 0.18)
+
+func _ensure_hp_bar():
+	if _hp_bar_bg != null:
+		return
+	var y := -(body_size.y * 0.5 + 10.0)
+	_hp_bar_bg = ColorRect.new()
+	_hp_bar_bg.color    = Color(0, 0, 0, 0.55)
+	_hp_bar_bg.size     = Vector2(HP_BAR_W, HP_BAR_H)
+	_hp_bar_bg.position = Vector2(-HP_BAR_W * 0.5, y)
+	_hp_bar_bg.z_index  = 5
+	add_child(_hp_bar_bg)
+	_hp_bar_fill = ColorRect.new()
+	_hp_bar_fill.color    = Color(0.3, 0.9, 0.3)
+	_hp_bar_fill.size     = Vector2(HP_BAR_W, HP_BAR_H)
+	_hp_bar_fill.position = Vector2(-HP_BAR_W * 0.5, y)
+	_hp_bar_fill.z_index  = 6
+	add_child(_hp_bar_fill)
+
+func _update_hp_bar():
+	_ensure_hp_bar()
+	var ratio := clampf(hp / max_hp, 0.0, 1.0)
+	_hp_bar_fill.size  = Vector2(HP_BAR_W * ratio, HP_BAR_H)
+	_hp_bar_fill.color = Color(0.95, 0.25, 0.2).lerp(Color(0.3, 0.9, 0.3), ratio)
+	_hp_bar_bg.visible   = true
+	_hp_bar_fill.visible = true
 
 func apply_dot(dmg_per_sec: float, duration: float):
 	dot_damage = dmg_per_sec
@@ -158,11 +198,12 @@ func _die():
 		var offset = Vector2(randf_range(-20, 20), randf_range(-20, 20))
 		Pickup.spawn(get_parent(), global_position + offset, Pickup.Type.GOLD, ceil(float(gold_amount) / 5.0))
 
-	# Small chance to drop health or ammo orb
+	# Health orbs can drop from anyone.
 	if randf() < 0.25:
 		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 12)
-	if randf() < 0.30:
-		Pickup.spawn(get_parent(), global_position + Vector2(8, 0), Pickup.Type.AMMO_ORB, 8)
+	# Energy orbs ("子弹") drop ONLY from elite monsters (and boss-mode variants).
+	if (is_elite or is_boss_mode) and randf() < 0.7:
+		Pickup.spawn(get_parent(), global_position + Vector2(8, 0), Pickup.Type.AMMO_ORB, 10)
 
 	$CollisionShape2D.set_deferred("disabled", true)
 	hitbox.set_deferred("monitoring", false)

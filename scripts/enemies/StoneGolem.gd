@@ -46,6 +46,7 @@ func _drop_rare_weapon(wid: String):
 func _on_ready_extra():
 	max_hp      = 160.0
 	hp          = max_hp
+	is_elite    = true
 	move_speed   = 40.0
 	damage      = 30.0
 	xp_value    = 25

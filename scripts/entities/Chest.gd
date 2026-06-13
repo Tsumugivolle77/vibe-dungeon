@@ -93,7 +93,7 @@ func _spawn_weapon_pickup(weapon_id: String):
 	area.add_to_group("weapon_pickup")
 	area.global_position = global_position + Vector2(randf_range(-30, 30), randf_range(-20, 20))
 
-	var spr  = PixelArt.sprite_from(PixelArt.make_gold_coin())  # placeholder icon
+	var spr  = PixelArt.sprite_from(PixelArt.make_weapon_icon(weapon_id))
 	area.add_child(spr)
 
 	var lbl  = Label.new()

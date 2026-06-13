@@ -1,5 +1,7 @@
 extends EnemyBase
 
+func _get_pixel_texture(): return PixelArt.make_goblin_archer()
+
 @export var preferred_distance: float = 220.0
 @export var fire_cooldown: float      = 1.8
 @export var bullet_speed: float       = 220.0

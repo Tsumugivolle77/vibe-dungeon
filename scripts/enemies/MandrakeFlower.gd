@@ -12,8 +12,8 @@ var laser_active: bool  = false
 var laser_dir: Vector2  = Vector2.RIGHT
 var _drop_timer: float  = 6.0
 
-const PHASE2_THRESHOLD = 0.6
-const PHASE3_THRESHOLD = 0.3
+const PHASE2_THRESHOLD = 0.5   # berserk at half HP (CLAUDE.md)
+const PHASE3_THRESHOLD = 0.25
 
 func _get_pixel_texture(): return PixelArt.make_mandrake()
 
@@ -28,14 +28,17 @@ func _on_ready_extra():
 	body_rect.color    = body_color
 	body_rect.size     = body_size
 	body_rect.position = -body_size * 0.5
+	if sprite:
+		sprite.scale = Vector2(3.0, 3.0)  # final boss: largest body (~4× a normal monster)
 	action_timer = 1.5
 
 func _tick_ai(delta: float):
-	# Periodic orb drops
-	_drop_timer -= delta
-	if _drop_timer <= 0.0:
-		_drop_timer = 6.0
-		_boss_drop()
+	# Only spew energy orbs ("子弹") below half HP (CLAUDE.md); none above.
+	if hp < max_hp * 0.5:
+		_drop_timer -= delta
+		if _drop_timer <= 0.0:
+			_drop_timer = 2.5
+			_boss_drop()
 
 	action_timer -= delta
 	_check_phase_transition()
@@ -50,12 +53,12 @@ func _tick_ai(delta: float):
 		_sweep_laser(delta)
 
 func _boss_drop():
-	var sides = [Vector2(-80, 0), Vector2(80, 0), Vector2(0, -60), Vector2(0, 60)]
+	var sides = [Vector2(-80, 0), Vector2(80, 0), Vector2(0, -60), Vector2(0, 60),
+		Vector2(-60, -60), Vector2(60, 60)]
 	for s in sides:
-		if randf() < 0.5:
-			Pickup.spawn(get_parent(), global_position + s, Pickup.Type.HEALTH_ORB, 15)
-		if randf() < 0.5:
-			Pickup.spawn(get_parent(), global_position + s.rotated(PI * 0.5), Pickup.Type.AMMO_ORB, 12)
+		Pickup.spawn(get_parent(), global_position + s, Pickup.Type.AMMO_ORB, 14)
+	if randf() < 0.5:
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 15)
 
 func _check_phase_transition():
 	var ratio = hp / max_hp
@@ -67,15 +70,18 @@ func _check_phase_transition():
 func _enter_phase(new_phase: int):
 	phase = new_phase
 	emit_signal("boss_phase_changed", phase)
+	# Flash the visible sprite, then keep an angry red berserk tint.
+	var flash_target = sprite if sprite else body_rect
+	var berserk_tint = Color(1.5, 0.6, 0.6)
 	var t = create_tween()
-	t.tween_property(body_rect, "modulate", Color.WHITE * 2.5, 0.1)
-	t.tween_property(body_rect, "modulate", Color.WHITE, 0.2)
+	t.tween_property(flash_target, "modulate", Color(2.5, 2.5, 2.5), 0.1)
+	t.tween_property(flash_target, "modulate", berserk_tint, 0.2)
 	match phase:
 		2:
-			body_rect.color = Color(0.9, 0.1, 0.4)
+			# 狂暴模式 at half HP — spew a retaliatory bullet ring and speed up.
 			move_speed = 40.0
+			_petal_ring(16)
 		3:
-			body_rect.color = Color(1.0, 0.0, 0.2)
 			move_speed = 70.0
 
 func _phase1_action():

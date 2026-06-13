@@ -9,17 +9,14 @@ const SPREAD_X     = 120.0
 
 var _choices: Array = []  # Array of Area2D weapon choice nodes
 
-func build(template_idx: int = -1, is_boss: bool = false, sublevel: int = 1):
-	super.build(template_idx, false, sublevel)
+func build(spec: Dictionary, sublevel: int):
+	super.build(spec, sublevel)
 	cleared = true
-	_unlock_doors()
-	_lock_doors()  # Re-lock until player makes a choice
 	await get_tree().process_frame
 	_present_choices()
 
 func _present_choices():
 	var all_ids = WeaponDatabase.get_all_weapon_ids()
-	# Exclude rare weapons from common reward pool
 	var common_ids = all_ids.filter(func(id): return not WeaponDatabase.get_weapon(id).get("props", {}).get("rare", false))
 	common_ids.shuffle()
 
@@ -31,7 +28,6 @@ func _present_choices():
 		_choices.append(node)
 		add_child(node)
 
-	# Banner
 	var lbl = Label.new()
 	lbl.text = "选择一件武器 [Enter]"
 	lbl.add_theme_font_size_override("font_size", 20)
@@ -42,30 +38,34 @@ func _present_choices():
 func _make_choice_node(weapon_id: String, pos: Vector2) -> Area2D:
 	var w = WeaponDatabase.get_weapon(weapon_id)
 	var area = Area2D.new()
-	area.add_to_group("weapon_pickup")
+	# NOT in "weapon_pickup" group so Player._try_pickup_weapon() ignores it;
+	# RewardRoom._process owns the full pick-then-cleanup sequence.
 	area.collision_layer = 0
 	area.collision_mask  = 2
 	area.global_position = pos
 	area.set_meta("weapon_id", weapon_id)
-	area.set_meta("is_reward_choice", true)
 
-	var bg = ColorRect.new()
-	bg.color    = w.get("color", Color.WHITE)
-	bg.size     = Vector2(36, 36)
-	bg.position = Vector2(-18, -18)
-	area.add_child(bg)
+	var icon_spr = PixelArt.sprite_from(PixelArt.make_weapon_icon(weapon_id))
+	area.add_child(icon_spr)
 
 	var name_lbl = Label.new()
 	name_lbl.text = w.get("name", "?")
 	name_lbl.add_theme_font_size_override("font_size", 13)
-	name_lbl.position = Vector2(-30, -50)
+	name_lbl.position = Vector2(-30, -26)
 	area.add_child(name_lbl)
+
+	var cost_lbl = Label.new()
+	cost_lbl.text = "耗能 %d/次" % w.get("energy_cost", 0)
+	cost_lbl.add_theme_font_size_override("font_size", 10)
+	cost_lbl.add_theme_color_override("font_color", Color(0.5, 0.85, 1.0))
+	cost_lbl.position = Vector2(-28, -12)
+	area.add_child(cost_lbl)
 
 	var hint = Label.new()
 	hint.text = "[Enter]"
 	hint.add_theme_font_size_override("font_size", 10)
 	hint.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
-	hint.position = Vector2(-18, 22)
+	hint.position = Vector2(-18, 20)
 	area.add_child(hint)
 
 	var col = CollisionShape2D.new()
@@ -87,7 +87,7 @@ func _process(_delta: float):
 		return
 
 	var closest: Area2D = null
-	var closest_dist = 80.0
+	var closest_dist = 90.0
 	for c in _choices:
 		if not is_instance_valid(c):
 			continue
@@ -103,12 +103,11 @@ func _process(_delta: float):
 	if not chosen_id.is_empty() and player.has_method("pick_up_weapon"):
 		player.pick_up_weapon(chosen_id)
 
-	# Remove all choices
+	# Free all choices (including the chosen one) now that pickup is done
 	for c in _choices:
 		if is_instance_valid(c):
 			c.queue_free()
 	_choices.clear()
 
-	# Open doors now
 	cleared = true
 	_unlock_doors()

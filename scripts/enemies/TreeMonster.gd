@@ -1,5 +1,7 @@
 extends EnemyBase
 
+func _get_pixel_texture(): return PixelArt.make_tree_monster()
+
 @export var shoot_range: float   = 360.0
 @export var shoot_cooldown: float = 2.0
 @export var seeds_per_shot: int   = 4

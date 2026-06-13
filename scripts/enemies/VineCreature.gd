@@ -1,5 +1,7 @@
 extends EnemyBase
 
+func _get_pixel_texture(): return PixelArt.make_vine_creature()
+
 @export var vine_range: float     = 180.0
 @export var vine_cooldown: float  = 3.0
 @export var root_duration: float  = 2.0

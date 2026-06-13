@@ -13,12 +13,13 @@ const MAGNET_SPEED  = 240.0
 const LIFETIME      = 22.0
 const AUTO_TYPES    = [Type.HEALTH_ORB, Type.AMMO_ORB, Type.GOLD]
 
-var _age: float       = 0.0
-var _bob: float       = 0.0
-var _attracted: bool  = false
-var _pull_time: float = 0.0
-var _player: Node2D   = null
-var _base_y: float    = 0.0
+var _age: float         = 0.0
+var _bob: float         = 0.0
+var _attracted: bool    = false
+var _pull_time: float   = 0.0
+var _player: Node2D     = null
+var _base_y: float      = 0.0
+var _base_y_set: bool   = false  # capture position on first _process after spawn()
 
 func setup(t: Type, val: float = 1.0):
 	pickup_type = t
@@ -64,8 +65,8 @@ func setup(t: Type, val: float = 1.0):
 	tw.tween_property(self, "scale", Vector2.ONE, 0.18).set_ease(Tween.EASE_OUT)
 
 func _ready():
-	_base_y = position.y
 	_find_player()
+	# _base_y is captured on the first _process frame, after spawn() sets global_position
 
 func _find_player():
 	var arr = get_tree().get_nodes_in_group("player")
@@ -74,9 +75,13 @@ func _find_player():
 func _process(delta: float):
 	_age += delta
 	_bob += delta * 3.2
+	# Capture base y on the first frame — after spawn() has set global_position.
+	# Doing this in _ready() is too early (position not yet set at that point).
+	if not _base_y_set:
+		_base_y = position.y
+		_base_y_set = true
 	# gentle bob
 	position.y = _base_y + sin(_bob) * 2.5
-	_base_y += 0.0  # keep base stable
 
 	if _age > LIFETIME:
 		var tw = create_tween()
@@ -142,26 +147,16 @@ func _apply(player: Node2D):
 			if player.has_method("heal"):
 				player.heal(int(value))
 		Type.AMMO_ORB:
-			_give_ammo(player, int(value))
+			if player.has_method("restore_energy"):
+				player.restore_energy(20)
 		Type.AMMO_PACK:
-			for id in player.weapon_ids:
-				WeaponDatabase.restore_ammo(id)
-			if player.weapon_ids.size() > 0:
-				player._equip(player.weapon_ids[player.weapon_idx])
+			if player.has_method("restore_energy"):
+				player.restore_energy(60)
 		Type.GOLD:
 			GameManager.add_gold(int(value))
 	emit_signal("collected")
 	_burst()
 	queue_free()
-
-func _give_ammo(player: Node2D, amount: int):
-	var w = player.weapon
-	if w.is_empty() or w.get("type") != "ranged":
-		return
-	var db_w = WeaponDatabase.weapons.get(w.get("id", ""))
-	if db_w:
-		db_w.ammo = min(db_w.ammo_max, db_w.get("ammo", 0) + amount)
-		player._equip(player.weapon_ids[player.weapon_idx])
 
 func _burst():
 	for i in 8:

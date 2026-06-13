@@ -8,10 +8,9 @@ const ITEM_SPREAD_X = 110.0
 
 var _shop_items: Array = []
 
-func build(template_idx: int = -1, is_boss: bool = false, sublevel: int = 1):
-	super.build(template_idx, false, sublevel)
+func build(spec: Dictionary, sublevel: int):
+	super.build(spec, sublevel)
 	cleared = true
-	_unlock_doors()
 	await get_tree().process_frame
 	_build_shop()
 
@@ -62,7 +61,7 @@ func _make_shop_node(item: Dictionary, pos: Vector2) -> Node2D:
 			display_name = "血包"
 		"ammo_pack":
 			color        = Color(0.2, 0.5, 0.9)
-			display_name = "弹夹"
+			display_name = "能量包"
 
 	var bg = ColorRect.new()
 	bg.color    = color
@@ -124,9 +123,8 @@ func _try_buy(player: Node, item_node: Node2D, data: Dictionary):
 			if player.has_method("heal"):
 				player.heal(40)
 		"ammo_pack":
-			for id in player.weapon_ids:
-				WeaponDatabase.restore_ammo(id)
-			player._equip(player.weapon_ids[player.weapon_idx])
+			if player.has_method("restore_energy"):
+				player.restore_energy(60)
 
 	item_node.queue_free()
 	_shop_items.erase(item_node)
