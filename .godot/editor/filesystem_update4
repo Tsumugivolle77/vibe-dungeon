@@ -1,3 +1,2 @@
 res://scripts/Player.gd
-res://scripts/autoload/WeaponDatabase.gd
-res://scripts/entities/Pickup.gd
+res://scripts/levels/Room.gd

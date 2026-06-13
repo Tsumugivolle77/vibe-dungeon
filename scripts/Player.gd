@@ -240,10 +240,10 @@ func _melee_slash_visual():
 		edge.add_point(Vector2(cos(a), sin(a)) * rng)
 	weapon_pivot.add_child(edge)
 
-	for node in [poly, edge]:
+	for node: CanvasItem in [poly, edge]:
 		node.rotation = -arc * 0.1
 		node.scale    = Vector2(0.92, 0.92)
-		var tw := node.create_tween()
+		var tw: Tween = node.create_tween()
 		tw.tween_property(node, "rotation", arc * 0.1, 0.16)
 		tw.parallel().tween_property(node, "scale", Vector2(1.05, 1.05), 0.16)
 		tw.parallel().tween_property(node, "modulate:a", 0.0, 0.22)
@@ -349,8 +349,8 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 	core.width = 2.0
 	core.default_color = Color(1, 1, 1, 0.95)
 	get_parent().add_child(core)
-	for n in [beam, core]:
-		var tw := n.create_tween()
+	for n: Line2D in [beam, core]:
+		var tw: Tween = n.create_tween()
 		tw.tween_property(n, "modulate:a", 0.0, 0.14)
 		tw.tween_callback(n.queue_free)
 

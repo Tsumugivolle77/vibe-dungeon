@@ -62,8 +62,8 @@ const BOSS_BY_SUBLEVEL = {
 func _process(delta: float):
 	if cleared or not combat_started or data.is_empty():
 		return
-	var w := data.cols * TILE_SIZE
-	var h := data.rows * TILE_SIZE
+	var w: float = float(data.cols) * TILE_SIZE
+	var h: float = float(data.rows) * TILE_SIZE
 	for e in get_children():
 		if not (e is Node2D) or not e.is_in_group("enemy") or not is_instance_valid(e):
 			continue
