@@ -22,7 +22,9 @@ var combat_started: bool   = false
 var total_waves: int       = 1
 var current_wave: int      = 0
 
-var _chest_scene: PackedScene = preload("res://scenes/entities/Chest.tscn")
+var _chest_scene: PackedScene  = preload("res://scenes/entities/Chest.tscn")
+var _barrel_scene: PackedScene = preload("res://scenes/entities/ExplosiveBarrel.tscn")
+var _spike_scene: PackedScene  = preload("res://scenes/entities/Spike.tscn")
 
 const ENEMY_SCENES = {
 	"goblin":          "res://scenes/enemies/Goblin.tscn",
@@ -81,6 +83,43 @@ func build(spec: Dictionary, sublevel: int):
 	_build_walls()
 	_build_doors(spec.get("doors", {}))
 	_build_navmesh()
+	if room_type == "combat":
+		_spawn_hazards()
+
+# Scatter explosive barrels and spike patches in combat rooms. Some rooms are
+# "barrel-heavy". Hazards avoid the room centre (where the player travels through).
+func _spawn_hazards():
+	var tiles: Array = data.spawn_points.duplicate()
+	tiles.shuffle()
+	var centre: Vector2i = data.center
+	var used := {}
+
+	var barrel_count := randi_range(5, 9) if randf() < 0.3 else randi_range(0, 2)
+	var placed := 0
+	for t in tiles:
+		if placed >= barrel_count:
+			break
+		if Vector2(t - centre).length() < 2.5:
+			continue
+		used[t] = true
+		var b = _barrel_scene.instantiate()
+		add_child(b)
+		b.position = RoomGenerator.tile_to_world(t)
+		placed += 1
+
+	if randf() < 0.35:
+		var spike_count := randi_range(4, 8)
+		var sp := 0
+		for t in tiles:
+			if sp >= spike_count:
+				break
+			if used.has(t) or Vector2(t - centre).length() < 2.5:
+				continue
+			used[t] = true
+			var s = _spike_scene.instantiate()
+			add_child(s)
+			s.position = RoomGenerator.tile_to_world(t)
+			sp += 1
 
 func _build_floors():
 	var floor_node = Node2D.new()
@@ -225,9 +264,26 @@ func start_combat():
 func _spawn_next_wave():
 	current_wave += 1
 	var pool: Array = SUBLEVEL_POOLS.get(sublevel_idx, SUBLEVEL_POOLS[1])
-	var spawns: Array = data.spawn_points.duplicate()
-	spawns.shuffle()
 	var count = 2 + sublevel_idx + randi() % 2
+
+	# Prefer spawn tiles away from the player so monsters never appear on top of them.
+	var spawns: Array = data.spawn_points.duplicate()
+	var pl = GameManager.player_ref
+	var min_dist := 170.0
+	if is_instance_valid(pl):
+		var pl_local: Vector2 = to_local(pl.global_position)
+		var far: Array = spawns.filter(
+			func(t): return RoomGenerator.tile_to_world(t).distance_to(pl_local) >= min_dist)
+		if far.size() >= count:
+			far.shuffle()
+			spawns = far
+		else:
+			spawns.sort_custom(func(a, b):
+				return RoomGenerator.tile_to_world(a).distance_to(pl_local) \
+					> RoomGenerator.tile_to_world(b).distance_to(pl_local))
+	else:
+		spawns.shuffle()
+
 	var spawned = 0
 	for i in min(count, spawns.size()):
 		var enemy_type = pool[randi() % pool.size()]

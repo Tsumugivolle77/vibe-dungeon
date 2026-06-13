@@ -77,10 +77,10 @@ func _on_phase(_p: int):
 
 # Below half HP the boss spews a few energy orbs ("子弹") for the player.
 func _boss_drop():
-	for s in [Vector2(-70, 0), Vector2(70, 0), Vector2(0, 70)]:
-		Pickup.spawn(get_parent(), global_position + s, Pickup.Type.AMMO_ORB, 8)
-	if randf() < 0.35:
-		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 8)
+	for s in [Vector2(-70, 0), Vector2(70, 0), Vector2(0, 70), Vector2(0, -70)]:
+		Pickup.spawn(get_parent(), global_position + s, Pickup.Type.AMMO_ORB, 16)
+	if randf() < 0.4:
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 10)
 
 # Drop the boss-exclusive rare weapon on death.
 func _on_die_extra():
@@ -125,3 +125,34 @@ func summon(scene_path: String, count: int, spread: float = 120.0):
 		get_parent().add_child(m)
 		m.global_position = global_position + Vector2(
 			randf_range(-spread, spread), randf_range(-spread * 0.6, spread * 0.6))
+
+# A telegraphed meteor: a warning circle grows at `target`, then after `delay`
+# it impacts, damaging the player if still inside the blast radius.
+func meteor(target: Vector2, delay: float, radius: float = 58.0, dmg: float = 20.0):
+	var warn := ColorRect.new()
+	warn.color    = Color(0.95, 0.25, 0.10, 0.22)
+	warn.size     = Vector2(radius * 2, radius * 2)
+	warn.global_position = target - Vector2(radius, radius)
+	get_parent().add_child(warn)
+	var grow := warn.create_tween()
+	grow.tween_property(warn, "modulate:a", 2.2, delay)
+	await get_tree().create_timer(delay).timeout
+	if not is_instance_valid(warn):
+		return
+	var pl = GameManager.player_ref
+	if is_instance_valid(pl) and pl.has_method("take_damage") \
+			and pl.global_position.distance_to(target) <= radius:
+		pl.take_damage(dmg)
+	warn.color = Color(1.0, 0.7, 0.2, 0.9)
+	var t := warn.create_tween()
+	t.tween_property(warn, "modulate:a", 0.0, 0.3)
+	t.tween_callback(warn.queue_free)
+
+# Rains meteors across a wide area around the player, leaving a few safe gaps.
+func meteor_storm(count: int, spread_x: float = 280.0, spread_y: float = 190.0):
+	if not is_instance_valid(player):
+		return
+	var base: Vector2 = player.global_position
+	for i in count:
+		var off := Vector2(randf_range(-spread_x, spread_x), randf_range(-spread_y, spread_y))
+		meteor(base + off, randf_range(0.6, 1.3), 54.0, 18.0)

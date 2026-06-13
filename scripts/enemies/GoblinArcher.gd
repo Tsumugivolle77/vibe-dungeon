@@ -42,4 +42,5 @@ func _tick_ai(delta: float):
 
 func _shoot_at_player():
 	fire_timer = fire_cooldown
-	shoot(direction_to_player(), bullet_speed)
+	# Fast "sniper" arrow.
+	shoot(direction_to_player(), bullet_speed * 2.2, -1.0, {"kind": "sniper"})

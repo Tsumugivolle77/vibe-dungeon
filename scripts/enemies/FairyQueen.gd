@@ -13,7 +13,7 @@ var _hover: float        = 0.0
 func _get_pixel_texture(): return PixelArt.make_fairy_queen()
 
 func _on_ready_extra():
-	max_hp     = 760.0
+	max_hp     = 1150.0
 	hp         = max_hp
 	move_speed = 130.0
 	damage     = 13.0
@@ -41,16 +41,26 @@ func _boss_ai(delta: float):
 			aimed_spread(5, 12.0, 250.0)
 		2:
 			action_timer = 1.8
-			if randi() % 2 == 0:
-				_spiral_volley()
-			else:
-				ring(10, 200.0, -1.0, randf() * TAU)
+			match randi() % 3:
+				0: _spiral_volley()
+				1: ring(10, 200.0, -1.0, randf() * TAU)
+				2: _homing_volley()
 		3:
 			action_timer = 1.6
-			match randi() % 3:
+			match randi() % 4:
 				0: _spiral_volley()
 				1: _blink()
 				2: summon(FAIRY_SCENE, 2)
+				3: _homing_volley()
+
+# Fires a fan of slow homing orbs that chase the player, then expire.
+func _homing_volley():
+	if not is_instance_valid(player):
+		return
+	var base := direction_to_player().angle()
+	for i in 5:
+		var a := base + deg_to_rad(20.0) * (i - 2)
+		shoot(Vector2(cos(a), sin(a)), 150.0, -1.0, {"homing": 2.2, "lifetime": 4.0})
 
 func _kite(_delta: float):
 	if not is_instance_valid(player):

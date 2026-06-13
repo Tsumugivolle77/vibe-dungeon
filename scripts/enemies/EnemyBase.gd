@@ -122,7 +122,7 @@ func distance_to_player() -> float:
 func direction_to_player() -> Vector2:
 	return (player.global_position - global_position).normalized() if is_instance_valid(player) else Vector2.ZERO
 
-func shoot(dir: Vector2, spd: float = 200.0, dmg: float = -1.0):
+func shoot(dir: Vector2, spd: float = 200.0, dmg: float = -1.0, props: Dictionary = {}):
 	var b: Node = enemy_bullet_scene.instantiate()
 	get_parent().add_child(b)
 	b.global_position = global_position
@@ -130,6 +130,9 @@ func shoot(dir: Vector2, spd: float = 200.0, dmg: float = -1.0):
 	b.speed           = spd
 	b.damage          = dmg if dmg >= 0 else damage
 	b.is_boss_bullet  = is_boss_mode
+	if props.has("kind"):     b.kind = props["kind"]
+	if props.has("homing"):   b.homing_strength = props["homing"]
+	if props.has("lifetime"): b.lifetime = props["lifetime"]
 
 func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dictionary = {}):
 	if not alive:
@@ -202,9 +205,12 @@ func _die():
 	# Health orbs can drop from anyone (rarer, smaller).
 	if randf() < 0.16:
 		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 6)
-	# Energy orbs ("子弹") drop ONLY from elite monsters (and boss-mode variants).
-	if (is_elite or is_boss_mode) and randf() < 0.6:
-		Pickup.spawn(get_parent(), global_position + Vector2(8, 0), Pickup.Type.AMMO_ORB, 6)
+	# Energy orbs ("子弹") drop ONLY from elite monsters (and boss-mode variants),
+	# but generously so the player can afford their powerful weapons.
+	if (is_elite or is_boss_mode) and randf() < 0.9:
+		for i in 2:
+			Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-14, 14), randf_range(-14, 14)),
+				Pickup.Type.AMMO_ORB, 14)
 
 	$CollisionShape2D.set_deferred("disabled", true)
 	hitbox.set_deferred("monitoring", false)

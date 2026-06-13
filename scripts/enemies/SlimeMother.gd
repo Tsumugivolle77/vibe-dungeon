@@ -8,7 +8,7 @@ const SLIME_SCENE = "res://scenes/enemies/Slime.tscn"
 func _get_pixel_texture(): return PixelArt.make_slime_mother()
 
 func _on_ready_extra():
-	max_hp     = 680.0
+	max_hp     = 1050.0
 	hp         = max_hp
 	move_speed = 45.0
 	damage     = 14.0

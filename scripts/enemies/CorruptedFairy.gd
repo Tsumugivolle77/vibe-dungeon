@@ -58,4 +58,8 @@ func _shoot_delayed(delay: float):
 	if is_instance_valid(player):
 		var aim = direction_to_player()
 		aim = aim.rotated(randf_range(-0.15, 0.15))
-		shoot(aim, 260.0)
+		# Sometimes fire a fast laser bolt instead of a normal shot.
+		if randf() < 0.35:
+			shoot(aim, 520.0, -1.0, {"kind": "laser"})
+		else:
+			shoot(aim, 260.0)

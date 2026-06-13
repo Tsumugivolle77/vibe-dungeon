@@ -18,7 +18,7 @@ const PHASE3_THRESHOLD = 0.25
 func _get_pixel_texture(): return PixelArt.make_mandrake()
 
 func _on_ready_extra():
-	max_hp      = 1200.0
+	max_hp      = 1800.0
 	hp          = max_hp
 	move_speed   = 0.0
 	damage      = 20.0
@@ -111,13 +111,20 @@ func _aimed_burst(count: int):
 		shoot(Vector2(cos(a), sin(a)), 230.0)
 
 func _phase2_action():
-	action_timer = 4.0
-	if randi() % 2 == 0:
-		_summon_minions()
-	else:
-		_vine_sweep()
+	action_timer = 3.6
+	match randi() % 3:
+		0: _summon_minions()
+		1: _vine_sweep()
+		2: _poison_nova()
 	if is_instance_valid(player):
 		navigate_to(player.global_position, 0.016)
+
+# Releases a ring of toxic bolts (毒系子弹).
+func _poison_nova():
+	var n := 14
+	for i in n:
+		var a := TAU * float(i) / float(n)
+		shoot(Vector2(cos(a), sin(a)), 175.0, damage * 0.8, {"kind": "poison"})
 
 func _summon_minions():
 	var count = 2 if phase == 2 else 3
@@ -145,11 +152,12 @@ func _vine_sweep():
 		shoot(Vector2(cos(a), sin(a)), 240.0, damage * 1.2)
 
 func _phase3_action():
-	action_timer = 3.0
-	match randi() % 3:
+	action_timer = 2.7
+	match randi() % 4:
 		0: _start_laser_sweep()
 		1: _rapid_petal_storm()
-		2:
+		2: _poison_nova()
+		3:
 			_petal_ring(12)
 			_summon_minions()
 

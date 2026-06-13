@@ -124,7 +124,7 @@ func _try_buy(player: Node, item_node: Node2D, data: Dictionary):
 				player.heal(25)
 		"ammo_pack":
 			if player.has_method("restore_energy"):
-				player.restore_energy(35)
+				player.restore_energy(55)
 
 	item_node.queue_free()
 	_shop_items.erase(item_node)

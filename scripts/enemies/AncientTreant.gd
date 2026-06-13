@@ -9,7 +9,7 @@ const MUSHROOM_SCENE = "res://scenes/enemies/MushroomMan.tscn"
 func _get_pixel_texture(): return PixelArt.make_ancient_treant()
 
 func _on_ready_extra():
-	max_hp     = 860.0
+	max_hp     = 1300.0
 	hp         = max_hp
 	move_speed = 0.0     # rooted in place
 	damage     = 16.0

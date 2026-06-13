@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
 signal health_changed(hp: int, max_hp: int)
+signal shield_changed(current: int, maximum: int)
 signal weapon_changed(weapon: Dictionary)
 signal energy_changed(current: int, maximum: int)
 signal skill_activated(duration: float)
@@ -22,6 +23,13 @@ var hp: int     = 100
 var alive: bool = true
 var invincible: bool = false
 
+# Shield: absorbs damage before HP; regenerates over time (1 per 0.1s = 10/s).
+const MAX_SHIELD            = 50.0
+const SHIELD_REGEN          = 10.0   # per second
+const SHIELD_RECHARGE_DELAY = 1.2    # seconds after a hit before regen resumes
+var shield: float           = MAX_SHIELD
+var _shield_delay: float    = 0.0
+
 var energy: int = MAX_ENERGY
 
 var weapon_ids: Array     = ["pistol"]
@@ -39,10 +47,11 @@ var skill_cd: float    = 0.0
 var is_melee_attacking: bool = false
 var melee_timer: float       = 0.0
 
-# Emergency punch — activated when energy too low to fire any weapon
-const PUNCH_DAMAGE   = 7.0
-const PUNCH_RANGE    = 40.0
-const PUNCH_COOLDOWN = 0.55
+# Emergency slash — activated when energy too low to fire any weapon
+const PUNCH_DAMAGE   = 12.0
+const PUNCH_RANGE    = 78.0
+const PUNCH_ARC      = 100.0   # degrees
+const PUNCH_COOLDOWN = 0.4
 var _punch_cd: float = 0.0
 
 @onready var weapon_pivot: Node2D     = $WeaponPivot
@@ -449,36 +458,54 @@ func pick_up_weapon(id: String):
 
 func _emergency_punch():
 	_punch_cd = PUNCH_COOLDOWN
-	var aim_ang: float = weapon_pivot.rotation
-	# Arc sweep visual — 7 particles spread over ±55°
-	for i in 7:
-		var t_frac = float(i) / 6.0
-		var angle  = aim_ang + lerp(-deg_to_rad(55.0), deg_to_rad(55.0), t_frac)
-		var dist   = randf_range(18.0, PUNCH_RANGE)
-		var cr     = ColorRect.new()
-		cr.color   = Color(1.0, 0.82, 0.28, 0.80)
-		var sz     = randf_range(5.0, 9.0)
-		cr.size    = Vector2(sz, sz)
-		cr.global_position = global_position + Vector2(cos(angle), sin(angle)) * dist - cr.size * 0.5
-		get_parent().add_child(cr)
-		var tw = cr.create_tween()
-		tw.tween_property(cr, "modulate:a", 0.0, 0.22)
-		tw.tween_callback(cr.queue_free)
+	var aim: float  = weapon_pivot.rotation
+	var half: float = deg_to_rad(PUNCH_ARC) * 0.5
 
-	# Damage enemies within the arc
+	# Wide energy-blade slash in the aim cone (a true 扇形 sweep).
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(e):
 			continue
-		var to_e = e.global_position - global_position
-		if to_e.length() > PUNCH_RANGE:
+		var to_e: Vector2 = e.global_position - global_position
+		if to_e.length() > PUNCH_RANGE + 14.0:
 			continue
-		var angle_diff = abs(to_e.angle() - aim_ang)
-		if angle_diff > PI:
-			angle_diff = TAU - angle_diff
-		if angle_diff > deg_to_rad(60.0):
+		if absf(angle_difference(aim, to_e.angle())) > half:
 			continue
 		if e.has_method("take_damage"):
-			e.take_damage(PUNCH_DAMAGE, to_e.normalized() * 60.0)
+			e.take_damage(PUNCH_DAMAGE, to_e.normalized() * 120.0)
+
+	_punch_slash_visual(aim, half)
+
+func _punch_slash_visual(aim: float, half: float):
+	var r_in := PUNCH_RANGE * 0.45
+	var steps := 16
+	var poly := Polygon2D.new()
+	var pts := PackedVector2Array()
+	for i in steps + 1:
+		var a: float = lerp(half, -half, float(i) / steps)
+		pts.append(Vector2(cos(a), sin(a)) * PUNCH_RANGE)
+	for i in steps + 1:
+		var a: float = lerp(-half, half, float(i) / steps)
+		pts.append(Vector2(cos(a), sin(a)) * r_in)
+	poly.polygon = pts
+	poly.color   = Color(0.55, 0.85, 1.0, 0.5)
+	poly.rotation = aim
+	weapon_pivot.add_child(poly)
+	var edge := Line2D.new()
+	edge.width = 5.0
+	edge.default_color = Color(0.9, 0.98, 1.0, 0.95)
+	edge.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	edge.end_cap_mode   = Line2D.LINE_CAP_ROUND
+	for i in steps + 1:
+		var a: float = lerp(-half, half, float(i) / steps)
+		edge.add_point(Vector2(cos(a), sin(a)) * PUNCH_RANGE)
+	edge.rotation = aim
+	weapon_pivot.add_child(edge)
+	for node: CanvasItem in [poly, edge]:
+		node.rotation -= deg_to_rad(PUNCH_ARC) * 0.12
+		var tw: Tween = node.create_tween()
+		tw.tween_property(node, "rotation", aim + deg_to_rad(PUNCH_ARC) * 0.12, 0.16)
+		tw.parallel().tween_property(node, "modulate:a", 0.0, 0.24)
+		tw.tween_callback(node.queue_free)
 
 func _tick_timers(delta: float):
 	if _punch_cd > 0.0:
@@ -487,12 +514,27 @@ func _tick_timers(delta: float):
 		melee_timer -= delta
 		if melee_timer <= 0.0:
 			is_melee_attacking = false
+	# Shield regen after a short delay since the last hit.
+	if _shield_delay > 0.0:
+		_shield_delay -= delta
+	elif shield < MAX_SHIELD:
+		shield = min(MAX_SHIELD, shield + SHIELD_REGEN * delta)
+		emit_signal("shield_changed", int(shield), int(MAX_SHIELD))
 
 func take_damage(amount: float):
 	if invincible or not alive:
 		return
-	hp = max(0, hp - int(amount))
-	emit_signal("health_changed", hp, max_hp)
+	_shield_delay = SHIELD_RECHARGE_DELAY
+	var dmg := float(amount)
+	# Shield soaks damage first; only the overflow reaches HP.
+	if shield > 0.0:
+		var absorbed := minf(shield, dmg)
+		shield -= absorbed
+		dmg    -= absorbed
+		emit_signal("shield_changed", int(shield), int(MAX_SHIELD))
+	if dmg > 0.0:
+		hp = max(0, hp - int(ceil(dmg)))
+		emit_signal("health_changed", hp, max_hp)
 	invincible = true
 	_flash_invincible()
 	if hp <= 0:

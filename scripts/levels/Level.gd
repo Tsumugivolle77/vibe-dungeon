@@ -46,7 +46,7 @@ const ROAD_COLOR    = Color(0.34, 0.32, 0.30)
 const ROAD_COLOR_2  = Color(0.28, 0.26, 0.25)
 
 const ROOM_CLEAR_HEAL   = 10
-const ROOM_CLEAR_ENERGY = 15
+const ROOM_CLEAR_ENERGY = 28
 
 var rooms:          Array = []
 var room_types:     Array = []
@@ -102,6 +102,7 @@ func _spawn_player():
 	player = player_scene.instantiate()
 	add_child(player)
 	player.health_changed.connect(hud._on_health_changed)
+	player.shield_changed.connect(hud._on_shield_changed)
 	player.weapon_changed.connect(hud._on_weapon_changed)
 	player.energy_changed.connect(hud._on_energy_changed)
 	player.skill_activated.connect(hud._on_skill_activated)
@@ -109,6 +110,7 @@ func _spawn_player():
 	player.died.connect(_on_player_died)
 	player.weapon_dropped.connect(_on_weapon_dropped)
 	hud._on_health_changed(player.hp, player.max_hp)
+	hud._on_shield_changed(int(player.shield), int(player.MAX_SHIELD))
 	hud._on_weapon_changed(player.weapon)
 	hud._on_energy_changed(player.energy, player.MAX_ENERGY)
 

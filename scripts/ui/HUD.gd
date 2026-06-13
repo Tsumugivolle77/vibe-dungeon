@@ -17,6 +17,9 @@ extends CanvasLayer
 @onready var game_over_panel:  Control     = $GameOverPanel
 
 var skill_max: float = 30.0
+var _hp: int = 100
+var _max_hp: int = 100
+var _shield: int = 0
 
 func _ready():
 	game_over_panel.hide()
@@ -28,9 +31,21 @@ func _ready():
 	GameManager.gold_changed.connect(_on_gold_changed)
 
 func _on_health_changed(hp: int, max_hp: int):
+	_hp = hp
+	_max_hp = max_hp
 	hp_bar.max_value = max_hp
 	hp_bar.value     = hp
-	hp_label.text    = "♥  %d / %d" % [hp, max_hp]
+	_refresh_hp_label()
+
+func _on_shield_changed(current: int, _maximum: int):
+	_shield = current
+	_refresh_hp_label()
+
+func _refresh_hp_label():
+	if _shield > 0:
+		hp_label.text = "♥ %d/%d   🛡 %d" % [_hp, _max_hp, _shield]
+	else:
+		hp_label.text = "♥ %d / %d" % [_hp, _max_hp]
 
 func _on_energy_changed(current: int, maximum: int):
 	energy_bar.max_value = maximum

@@ -60,9 +60,10 @@ func _scatter_contents(_player: Node2D):
 	var gold_amount = randi_range(3, 9)
 	Pickup.spawn(get_parent(), global_position, Pickup.Type.GOLD, gold_amount)
 
-	# Ammo orb (always) – 1 orb
-	Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-24, 24), randf_range(-24, 24)),
-		Pickup.Type.AMMO_ORB, 10)
+	# Ammo orbs (always) – 2 orbs
+	for i in 2:
+		Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-26, 26), randf_range(-26, 26)),
+			Pickup.Type.AMMO_ORB, 20)
 
 	# Health pack (30% chance)
 	if randf() < 0.3:

@@ -11,7 +11,7 @@ var _charge_dir: Vector2 = Vector2.RIGHT
 func _get_pixel_texture(): return PixelArt.make_goblin_king()
 
 func _on_ready_extra():
-	max_hp     = 520.0
+	max_hp     = 900.0
 	hp         = max_hp
 	move_speed = 60.0
 	damage     = 18.0
@@ -38,19 +38,23 @@ func _boss_ai(delta: float):
 	match phase:
 		1:
 			action_timer = 2.2
-			aimed_spread(3, 14.0, 240.0)          # axe throw
+			if randi() % 3 == 0:
+				meteor(player.global_position, 0.9, 60.0, 18.0)   # single meteor
+			else:
+				aimed_spread(3, 14.0, 240.0)                      # axe throw
 		2:
 			action_timer = 2.6
-			if randi() % 2 == 0:
-				_charge()
-			else:
-				aimed_spread(5, 12.0, 260.0)
-		3:
-			action_timer = 2.4
 			match randi() % 3:
+				0: _charge()
+				1: aimed_spread(5, 12.0, 260.0)
+				2: meteor_storm(6)                                # berserk: meteor rain
+		3:
+			action_timer = 2.8
+			match randi() % 4:
 				0: _charge()
 				1: ring(10, 220.0)
 				2: summon(GOBLIN_SCENE, 3)
+				3: meteor_storm(14)                               # mass meteors, few safe spots
 
 func _on_phase(p: int):
 	if p == 2:

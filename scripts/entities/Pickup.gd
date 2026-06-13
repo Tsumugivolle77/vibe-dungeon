@@ -148,10 +148,10 @@ func _apply(player: Node2D):
 				player.heal(int(value))
 		Type.AMMO_ORB:
 			if player.has_method("restore_energy"):
-				player.restore_energy(10)
+				player.restore_energy(20)
 		Type.AMMO_PACK:
 			if player.has_method("restore_energy"):
-				player.restore_energy(35)
+				player.restore_energy(55)
 		Type.GOLD:
 			GameManager.add_gold(int(value))
 	emit_signal("collected")

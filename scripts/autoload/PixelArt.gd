@@ -515,6 +515,38 @@ func make_crate() -> ImageTexture:
 	}
 	return _tex(rows, pal)
 
+func make_barrel() -> ImageTexture:
+	var rows = [
+		".RRRRRR.",
+		"RRRRRRRR",
+		"YYYYYYYY",
+		"RRRRRRRR",
+		"RRRRRRRR",
+		"YYYYYYYY",
+		"RRRRRRRR",
+		".RRRRRR.",
+	]
+	var pal = {
+		"R": Color(0.78, 0.16, 0.12),
+		"Y": Color(0.95, 0.85, 0.15),
+		".": Color(0, 0, 0, 0),
+	}
+	return _tex(rows, pal)
+
+func make_spikes() -> ImageTexture:
+	var rows = [
+		"M.M.M.M.M",
+		"MMMMMMMMM",
+		"DDDDDDDDD",
+		"DDDDDDDDD",
+	]
+	var pal = {
+		"M": Color(0.72, 0.74, 0.80),
+		"D": Color(0.38, 0.40, 0.46),
+		".": Color(0, 0, 0, 0),
+	}
+	return _tex(rows, pal)
+
 func make_tree() -> ImageTexture:
 	var rows = [
 		"...GGG...",
