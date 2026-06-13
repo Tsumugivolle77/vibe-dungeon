@@ -13,6 +13,7 @@ func _on_ready_extra():
 	move_speed = 45.0
 	damage     = 14.0
 	xp_value   = 350
+	boss_drop_weapon = "slime_burst"
 	body_color = Color(0.30, 0.80, 0.34)
 	body_size  = Vector2(64, 64)
 	body_rect.color    = body_color

@@ -18,6 +18,7 @@ func _on_ready_extra():
 	move_speed = 130.0
 	damage     = 13.0
 	xp_value   = 450
+	boss_drop_weapon = "fairy_scepter"
 	body_color = Color(0.90, 0.30, 0.84)
 	body_size  = Vector2(56, 56)
 	body_rect.color    = body_color

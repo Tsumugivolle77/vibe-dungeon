@@ -31,16 +31,17 @@ func _ready():
 	_register_ranged("shotgun",         "霰弹枪",     15,  1.0, 380, 6,  20, 5,  {})
 	_register_ranged("sniper",          "狙击枪",     80,  0.5, 800, 1,  0,  4,  {})
 	_register_ranged("rocket_launcher", "火箭炮",     100, 0.5, 300, 1,  0,  15, {"explosive": true, "explosion_radius": 80.0})
+	_register_ranged("cannon",          "加农炮",     85,  0.6, 340, 1,  0,  12, {"explosive": true, "explosion_radius": 95.0})
 	_register_ranged("fire_staff",      "火焰法杖",   18,  1.4, 300, 3,  20, 4,  {"fire_dot": true, "element": "fire", "trail": true})
 	_register_ranged("ice_staff",       "冰霜法杖",   14,  1.4, 280, 3,  24, 4,  {"slow": true, "slow_factor": 0.4, "element": "ice", "trail": true})
-	_register_ranged("lightning_staff", "闪电法杖",   22,  1.1, 350, 4,  18, 5,  {"chain": true, "chain_range": 150.0, "element": "lightning", "trail": true})
+	_register_ranged("lightning_staff", "闪电法杖",   13,  1.0, 300, 12, 0,  6,  {"ring": true, "bouncing": true, "max_bounces": 4, "element": "lightning", "trail": true})
 	_register_ranged("crossbow",        "弩",         45,  1.0, 500, 1,  0,  3,  {"piercing": true})
 	_register_ranged("grenade_launcher","榴弹炮",     70,  0.7, 250, 1,  0,  10, {"explosive": true, "bouncing": true, "explosion_radius": 80.0})
 	_register_ranged("flamethrower",    "火焰喷射器", 8,   15.0,200, 1,  15, 1,  {"continuous": true, "element": "fire"})
 	_register_ranged("laser_gun",       "激光枪",     30,  3.0, 650, 1,  0,  3,  {"laser": true})
 	_register_ranged("boomerang",       "回旋镖",     25,  1.5, 350, 1,  0,  8,  {"returns": true})
 	_register_ranged("bow",             "弓箭",       35,  1.0, 450, 1,  0,  5,  {"charged": true})
-	_register_ranged("plasma_gun",      "等离子枪",   40,  1.5, 400, 1,  0,  5,  {"piercing": true, "element": "plasma"})
+	_register_ranged("plasma_gun",      "等离子枪",   40,  1.5, 400, 1,  0,  5,  {"bouncing": true, "max_bounces": 3, "element": "plasma"})
 	_register_ranged("minigun",         "加特林",     8,   15.0,480, 1,  5,  1,  {"windup": true, "windup_time": 1.0})
 	_register_ranged("railgun",         "轨道炮",     120, 0.3, 900, 1,  0,  20, {"piercing": true})
 	_register_ranged("holy_staff",      "神圣法杖",   18,  1.4, 250, 3,  16, 5,  {"homing": true, "element": "holy", "trail": true})
@@ -51,6 +52,13 @@ func _ready():
 	_register_ranged("frozen_gale",  "冰霜疾风",  32,  1.2, 300, 5, 22, 5,  {"slow": true, "slow_factor": 0.12, "element": "ice", "rare": true})
 	_register_melee ("dragon_fang",  "龙牙",      110, 2.2, 115, 120, 8,  {"dash": true, "knockback": 350.0, "rare": true})
 	_register_melee ("holy_sword",   "圣剑",      80,  2.8, 105, 90,  6,  {"knockback": 280.0, "element": "holy", "rare": true})
+
+	# ── Boss 专属稀有掉落 (one per boss) ───────────────────────────────────────
+	_register_melee ("kings_greataxe", "哥布林王巨斧", 130, 1.6, 135, 150, 3, {"knockback": 420.0, "rare": true, "boss": true})
+	_register_ranged("slime_burst",    "史莱姆爆弹",   70,  1.0, 300, 3, 30, 4, {"explosive": true, "bouncing": true, "max_bounces": 3, "explosion_radius": 72.0, "rare": true, "boss": true})
+	_register_ranged("treant_staff",   "古树之灵杖",   16,  1.0, 300, 14, 0, 5, {"ring": true, "bouncing": true, "max_bounces": 3, "element": "fire", "rare": true, "boss": true})
+	_register_ranged("fairy_scepter",  "妖精女王杖",   30,  1.4, 380, 6, 0,  5, {"ring": true, "homing": true, "element": "holy", "rare": true, "boss": true})
+	_register_ranged("mandrake_rod",   "曼陀罗魔杖",   55,  0.8, 420, 8, 0,  6, {"ring": true, "explosive": true, "explosion_radius": 60.0, "element": "plasma", "rare": true, "boss": true})
 
 func _register_melee(id: String, dname: String, damage: float, fire_rate: float,
 		range_px: float, arc_deg: float, energy_cost: int, props: Dictionary):

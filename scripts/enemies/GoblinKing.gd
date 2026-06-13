@@ -16,6 +16,7 @@ func _on_ready_extra():
 	move_speed = 60.0
 	damage     = 18.0
 	xp_value   = 300
+	boss_drop_weapon = "kings_greataxe"
 	body_color = Color(0.26, 0.55, 0.20)
 	body_size  = Vector2(64, 64)
 	body_rect.color    = body_color

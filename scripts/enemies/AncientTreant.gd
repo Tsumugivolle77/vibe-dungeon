@@ -14,6 +14,7 @@ func _on_ready_extra():
 	move_speed = 0.0     # rooted in place
 	damage     = 16.0
 	xp_value   = 400
+	boss_drop_weapon = "treant_staff"
 	body_color = Color(0.22, 0.58, 0.20)
 	body_size  = Vector2(72, 72)
 	body_rect.color    = body_color

@@ -19,7 +19,8 @@ const PHASE3_THRESHOLD = 0.25
 var phase: int          = 1
 var berserk: bool       = false
 var action_timer: float = 1.5
-var _drop_timer: float  = 2.5
+var _drop_timer: float  = 3.0
+var boss_drop_weapon: String = ""   # boss-exclusive rare dropped on death
 
 func _on_ready_extra():
 	# Subclass should call super() AFTER setting stats so the sprite scales correctly.
@@ -74,13 +75,17 @@ func _tint() -> Color:
 func _on_phase(_p: int):
 	pass
 
-# Below half HP the boss spews a burst of energy orbs ("子弹") for the player.
+# Below half HP the boss spews a few energy orbs ("子弹") for the player.
 func _boss_drop():
-	for s in [Vector2(-80, 0), Vector2(80, 0), Vector2(0, -70), Vector2(0, 70),
-			Vector2(-60, -60), Vector2(60, 60)]:
-		Pickup.spawn(get_parent(), global_position + s, Pickup.Type.AMMO_ORB, 14)
-	if randf() < 0.5:
-		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 15)
+	for s in [Vector2(-70, 0), Vector2(70, 0), Vector2(0, 70)]:
+		Pickup.spawn(get_parent(), global_position + s, Pickup.Type.AMMO_ORB, 8)
+	if randf() < 0.35:
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 8)
+
+# Drop the boss-exclusive rare weapon on death.
+func _on_die_extra():
+	if boss_drop_weapon != "":
+		spawn_weapon_pickup(boss_drop_weapon)
 
 # Bosses ignore knockback and report HP changes to the boss bar.
 func take_damage(amount: float, _knockback: Vector2 = Vector2.ZERO, _props: Dictionary = {}):

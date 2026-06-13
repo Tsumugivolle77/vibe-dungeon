@@ -6,6 +6,7 @@ var damage: float            = 15.0
 var lifetime: float          = 3.0
 var weapon_props: Dictionary = {}
 var weapon_id: String        = "pistol"
+var _bounces: int            = 0
 
 var _age: float = 0.0
 var _hit: bool  = false
@@ -31,8 +32,8 @@ func _setup_visual():
 			$Visual.scale = Vector2(3.5, 0.25)   # ultra-thin beam segment
 		"bow", "crossbow", "thunder_bow":
 			$Visual.scale = Vector2(2.4, 0.38)   # arrow shaft
-		"rocket_launcher", "grenade_launcher":
-			$Visual.scale = Vector2(1.8, 1.3)    # rocket
+		"rocket_launcher", "grenade_launcher", "cannon", "slime_burst", "mandrake_rod":
+			$Visual.scale = Vector2(1.8, 1.3)    # rocket / shell
 		"boomerang":
 			$Visual.scale = Vector2(1.6, 1.6)    # chunky disc
 		"smg", "machine_gun", "minigun", "shotgun":
@@ -141,8 +142,19 @@ func _on_body(body: Node2D):
 			_destroy()
 		return
 	if body is StaticBody2D:
-		if weapon_props.get("bouncing"):
-			direction = direction.bounce(Vector2.RIGHT)
+		if weapon_props.get("bouncing") and _bounces < int(weapon_props.get("max_bounces", 2)):
+			# Approximate the wall normal from the bullet's offset to the tile centre,
+			# snapped to the nearest axis (tiles are axis-aligned squares).
+			var n: Vector2 = global_position - body.global_position
+			if absf(n.x) >= absf(n.y):
+				n = Vector2(signf(n.x), 0.0)
+			else:
+				n = Vector2(0.0, signf(n.y))
+			if n == Vector2.ZERO:
+				n = -direction
+			direction = direction.bounce(n).normalized()
+			_bounces += 1
+			global_position += direction * 6.0   # nudge clear of the wall
 		elif weapon_props.get("explosive"):
 			_explode()
 		else:

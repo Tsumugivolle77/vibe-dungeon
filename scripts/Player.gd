@@ -262,28 +262,40 @@ func _fire_ranged(delta: float):
 	if energy < cost:
 		return
 
+	var dmg: float = weapon.get("damage", 10.0) * (2.0 if skill_active else 1.0)
+
+	# Laser weapons fire an instant hitscan ray instead of a projectile.
+	if props.get("laser"):
+		_fire_laser(props, dmg)
+		_spend_energy(cost)
+		fire_timer = 1.0 / weapon.fire_rate
+		return
+
 	var base_count: int = weapon.get("bullet_count", 1)
 	var spread: float = deg_to_rad(weapon.get("spread", 0.0))
 	var aim_ang: float = weapon_pivot.rotation
 	var spd: float    = weapon.get("bullet_speed", 400.0)
-	var dmg: float    = weapon.get("damage", 10.0)
+	var is_ring: bool = props.get("ring", false)
 
 	# Skill: fire double the bullets, fanned out with spacing between them.
 	var count := base_count
-	if skill_active:
+	if skill_active and not is_ring:
 		count = base_count * 2
-		# Guarantee a visible fan even for single-shot weapons.
 		spread = max(spread, deg_to_rad(16.0))
+	elif skill_active and is_ring:
+		count = base_count * 2   # denser ring
 
 	for i in count:
 		var angle = aim_ang
-		if count > 1:
+		if is_ring:
+			angle = aim_ang + TAU * float(i) / float(count)   # even 360° ring
+		elif count > 1:
 			angle += lerp(-spread * 0.5, spread * 0.5, float(i) / float(count - 1))
 		elif spread > 0.0:
 			angle += randf_range(-spread * 0.5, spread * 0.5)
 		var b: Node = bullet_scene.instantiate()
 		get_parent().add_child(b)
-		b.global_position = global_position + Vector2(cos(aim_ang), sin(aim_ang)) * 32.0
+		b.global_position = global_position + Vector2(cos(angle), sin(angle)) * 28.0
 		b.direction    = Vector2(cos(angle), sin(angle))
 		b.speed        = spd
 		b.damage       = dmg
@@ -292,6 +304,55 @@ func _fire_ranged(delta: float):
 
 	_spend_energy(cost)
 	fire_timer = 1.0 / weapon.fire_rate
+
+# Hitscan laser: damages every enemy along a ray to the first wall, draws a beam.
+func _fire_laser(props: Dictionary, dmg: float):
+	var aim: float   = weapon_pivot.rotation
+	var dir: Vector2 = Vector2(cos(aim), sin(aim))
+	var origin: Vector2 = global_position + dir * 26.0
+	var max_len := 720.0
+	var space := get_world_2d().direct_space_state
+	var q := PhysicsRayQueryParameters2D.create(origin, origin + dir * max_len, 1)
+	q.collide_with_bodies = true
+	var hit := space.intersect_ray(q)
+	var endp: Vector2 = hit.position if hit else origin + dir * max_len
+	var beam_len := origin.distance_to(endp)
+
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var to_e: Vector2 = e.global_position - origin
+		var proj := to_e.dot(dir)
+		if proj < 0.0 or proj > beam_len:
+			continue
+		if (to_e - dir * proj).length() <= 16.0 and e.has_method("take_damage"):
+			e.take_damage(dmg, dir * 50.0, props)
+
+	_laser_beam_visual(origin, endp, props.get("element", ""))
+
+func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
+	var col := Color(0.2, 0.95, 1.0)
+	match elem:
+		"plasma": col = Color(0.6, 0.3, 1.0)
+		"fire":   col = Color(1.0, 0.4, 0.1)
+	var beam := Line2D.new()
+	beam.add_point(from)
+	beam.add_point(to)
+	beam.width = 6.0
+	beam.default_color = col
+	beam.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	beam.end_cap_mode   = Line2D.LINE_CAP_ROUND
+	get_parent().add_child(beam)
+	var core := Line2D.new()
+	core.add_point(from)
+	core.add_point(to)
+	core.width = 2.0
+	core.default_color = Color(1, 1, 1, 0.95)
+	get_parent().add_child(core)
+	for n in [beam, core]:
+		var tw := n.create_tween()
+		tw.tween_property(n, "modulate:a", 0.0, 0.14)
+		tw.tween_callback(n.queue_free)
 
 func _spend_energy(amount: int):
 	energy = max(0, energy - amount)

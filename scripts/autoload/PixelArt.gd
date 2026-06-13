@@ -294,43 +294,47 @@ const SPR_VINE = [
 const PAL_GOBLIN_KING = {
 	"G": Color(0.26, 0.55, 0.20), "g": Color(0.16, 0.38, 0.13),
 	"E": Color(1.00, 0.25, 0.12), "T": Color(0.95, 0.92, 0.80),
-	"C": Color(0.98, 0.82, 0.15), "A": Color(0.58, 0.60, 0.66),
-	"a": Color(0.40, 0.42, 0.48), "K": Color(0.65, 0.10, 0.12),
-	".": Color(0, 0, 0, 0),
+	"C": Color(0.92, 0.74, 0.12), "c": Color(0.70, 0.52, 0.06), "Y": Color(1.00, 0.95, 0.55),
+	"A": Color(0.62, 0.64, 0.70), "a": Color(0.40, 0.42, 0.48), "h": Color(0.80, 0.82, 0.88),
+	"K": Color(0.65, 0.10, 0.12), ".": Color(0, 0, 0, 0),
 }
 const SPR_GOBLIN_KING = [
-	"...C.C.C.....",
-	"...CCCCC.....",
-	"..gGGGGGg....",
-	"..GEGgGEG....",
-	"..GGGGGGG....",
-	"..GgTTTgG....",
-	".AAAAAAAAA...",
-	".AaAAAAaAA...",
-	".KAAAAAAAK...",
-	".K.G...G.K...",
-	"...G...G.....",
-	"...g...g.....",
+	"....C.C.C....",
+	"...CcCYCcC...",
+	"..gGGGGGGGg..",
+	".gGGGGGGGGGg.",
+	".GGEEgGgEEGG.",
+	".GGGGGGGGGGG.",
+	".gGGgTTTgGGg.",
+	"KKAAAAAAAAAKK",
+	"KKAaAhhhAaAKK",
+	"KKAAAAAAAAAKK",
+	".K.gG...Gg.K.",
+	"...GG...GG...",
+	"...gg...gg...",
 ]
 
 # ── Boss: Slime Mother ────────────────────────────────────────────────────────
 const PAL_SLIME_MOTHER = {
 	"S": Color(0.30, 0.80, 0.34), "s": Color(0.18, 0.58, 0.22),
-	"E": Color(0.10, 0.25, 0.10), "H": Color(0.62, 0.98, 0.64, 0.85),
-	"C": Color(0.98, 0.82, 0.15), ".": Color(0, 0, 0, 0),
+	"E": Color(0.10, 0.25, 0.10), "W": Color(0.95, 0.98, 0.95),
+	"H": Color(0.62, 0.98, 0.64, 0.85), "m": Color(0.12, 0.30, 0.12),
+	"C": Color(0.92, 0.74, 0.12), "c": Color(0.70, 0.52, 0.06), "Y": Color(1.00, 0.95, 0.55),
+	".": Color(0, 0, 0, 0),
 }
 const SPR_SLIME_MOTHER = [
-	"...C.C.C....",
-	"...CCCCC....",
-	"..SSSSSSS...",
-	".SSSSSSSSS..",
-	"SSSSSSSSSSS.",
-	"SSEHSSSEHSS.",
-	"SSSSSSSSSSS.",
-	"SSSSSSSSSSS.",
-	".sSSSSSSSs..",
-	"..sSSSSSs...",
-	"...sssss....",
+	"....C.C.C....",
+	"...CcCYCcC...",
+	"...SSSSSSS...",
+	"..SSHHHHHSS..",
+	".SSHSSSSSHSS.",
+	"SSSSSSSSSSSSS",
+	"SSEWSSSSSEWSS",
+	"SSSSSmSSSSSSS",
+	"SSSSSSSSSSSSS",
+	".sSSSSSSSSSs.",
+	"..sSSSSSSSs..",
+	"...sssssss...",
 ]
 
 # ── Boss: Ancient Treant ──────────────────────────────────────────────────────
@@ -341,37 +345,39 @@ const PAL_TREANT = {
 	".": Color(0, 0, 0, 0),
 }
 const SPR_TREANT = [
-	"....GGGGGG....",
-	"..GGGGGGGGGG..",
-	".GGGGGGGGGGGG.",
-	".GGgGGGGGGgGG.",
-	"..GGGGGGGGGG..",
-	"...TTTTTTTT...",
+	"...gGGGGGGg...",
+	".gGGGGGGGGGGg.",
+	"gGGGgGGGGgGGGg",
+	"gGGGGGGGGGGGGg",
+	".gGGGGGGGGGGg.",
+	"...TtTTTTtT...",
 	"..TTETTTTETT..",
-	"..TTTTMMTTTT..",
+	"..TtTTMMTTtT..",
 	"..TTTMMMMTTT..",
-	"..TTMMMMMMTT..",
-	"..TtTTTTTTtT..",
+	"..TtTMMMMTtT..",
+	"..TTtTTTTtTT..",
 	"...TT....TT...",
-	"...tt....tt...",
+	"..ttt....ttt..",
 ]
 
 # ── Boss: Fairy Queen ─────────────────────────────────────────────────────────
 const PAL_FAIRY_QUEEN = {
 	"P": Color(0.90, 0.30, 0.84), "p": Color(0.66, 0.18, 0.62),
 	"W": Color(0.96, 0.92, 1.00, 0.80), "E": Color(0.98, 0.95, 0.30),
-	"G": Color(0.55, 0.95, 0.60, 0.55), "C": Color(0.98, 0.82, 0.15),
+	"G": Color(0.55, 0.95, 0.60, 0.55), "m": Color(0.55, 0.10, 0.45),
+	"C": Color(0.92, 0.74, 0.12), "c": Color(0.70, 0.52, 0.06), "Y": Color(1.00, 0.95, 0.55),
 	".": Color(0, 0, 0, 0),
 }
 const SPR_FAIRY_QUEEN = [
-	"....CCC......",
-	"W...C.C...W..",
-	"GW.PPPPP.WG..",
+	"....CYC......",
+	"W...CcC...W..",
+	"WW.pPPPp.WW..",
 	"GWPPPPPPPWG..",
-	"WWPEPPPEPWW..",
-	"GWPPPPPPPWG..",
-	"GW.PPPPP.WG..",
-	"W...PPP...W..",
+	"GWPEPPPEPWG..",
+	"WWPPPmPPPWW..",
+	"GWpPPPPPpWG..",
+	"GW.pPPPp.WG..",
+	"W...PpP...W..",
 	"....P.P......",
 ]
 
@@ -578,17 +584,21 @@ func make_weapon_icon(weapon_id: String) -> ImageTexture:
 			return _tex_p(WICON_HAMMER, {"W":Color(0.62,0.62,0.65),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
 		"battle_axe":
 			return _tex_p(WICON_AXE, {"W":Color(0.60,0.62,0.65),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
+		"kings_greataxe":
+			return _tex_p(WICON_AXE, {"W":Color(0.95,0.80,0.20),"B":Color(0.55,0.10,0.10),".":Color(0,0,0,0)})
 		"pistol","revolver":
 			return _tex_p(WICON_PISTOL, gp)
 		"smg","machine_gun","minigun":
 			return _tex_p(WICON_SMG, gp)
 		"shotgun","grenade_launcher":
 			return _tex_p(WICON_SHOTGUN, gp)
+		"slime_burst":
+			return _tex_p(WICON_SHOTGUN, {"W":Color(0.35,0.85,0.40),"B":Color(0.15,0.45,0.18),".":Color(0,0,0,0)})
 		"sniper","railgun":
 			return _tex_p(WICON_SNIPER, gp)
 		"crossbow":
 			return _tex_p(WICON_CROSSBOW, {"W":Color(0.65,0.45,0.18),"B":Color(0.38,0.24,0.08),".":Color(0,0,0,0)})
-		"rocket_launcher","flamethrower":
+		"rocket_launcher","flamethrower","cannon":
 			return _tex_p(WICON_ROCKET, {"W":Color(0.45,0.45,0.48),"B":Color(0.32,0.32,0.35),".":Color(0,0,0,0)})
 		"fire_staff":
 			return _tex_p(WICON_STAFF, {"X":Color(0.95,0.42,0.05),"E":Color(1.0,0.85,0.10),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
@@ -596,8 +606,12 @@ func make_weapon_icon(weapon_id: String) -> ImageTexture:
 			return _tex_p(WICON_STAFF, {"X":Color(0.30,0.85,0.95),"E":Color(0.95,0.98,1.0),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
 		"lightning_staff":
 			return _tex_p(WICON_STAFF, {"X":Color(0.92,0.88,0.10),"E":Color(1.0,1.0,0.80),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
-		"holy_staff":
+		"holy_staff","fairy_scepter":
 			return _tex_p(WICON_STAFF, {"X":Color(1.0,0.88,0.30),"E":Color(1.0,1.0,0.95),"B":Color(0.55,0.42,0.12),".":Color(0,0,0,0)})
+		"treant_staff":
+			return _tex_p(WICON_STAFF, {"X":Color(0.35,0.70,0.25),"E":Color(0.95,0.85,0.30),"B":Color(0.40,0.26,0.10),".":Color(0,0,0,0)})
+		"mandrake_rod":
+			return _tex_p(WICON_STAFF, {"X":Color(0.80,0.20,0.65),"E":Color(1.0,0.85,0.95),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
 		"bow":
 			return _tex_p(WICON_BOW, {"W":Color(0.65,0.42,0.14),"A":Color(0.82,0.85,0.90),".":Color(0,0,0,0)})
 		"thunder_bow":

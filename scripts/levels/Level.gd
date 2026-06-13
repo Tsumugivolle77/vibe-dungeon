@@ -7,14 +7,22 @@ signal boss_hp_changed(hp: float, max_hp: float)
 # at the boss room. Rooms are placed left-to-right, all vertically centred on a
 # shared axis so their edge-midpoint doors line up with straight roads.
 #
-# Sequences below are the MIDDLE rooms; "v" start room is the first entry and the
-# boss room is appended automatically. "v"=start "c"=combat "r"=reward "s"=shop
-const SUBLEVEL_SEQUENCES = {
-	1: ["v", "c", "c", "r", "c"],
-	2: ["v", "c", "c", "r", "c", "s"],
-	3: ["v", "c", "c", "r", "c", "c", "s"],
-	4: ["v", "c", "r", "c", "c", "s", "c"],
-	5: ["v", "c", "r", "c", "c", "s", "c", "c"],
+# The MAIN path runs horizontally: start ("v") → combat ("c")… → boss ("b" appended).
+# BRANCHES hang off a main combat room via a vertical corridor (up/down door),
+# holding reward ("r") / shop ("s") rooms so the layout isn't a straight line.
+const SUBLEVEL_MAIN = {
+	1: ["v", "c", "c", "c"],
+	2: ["v", "c", "c", "c", "c"],
+	3: ["v", "c", "c", "c", "c"],
+	4: ["v", "c", "c", "c", "c", "c"],
+	5: ["v", "c", "c", "c", "c", "c"],
+}
+const SUBLEVEL_BRANCHES = {
+	1: [{"type": "r", "at": 2, "dir": "up"}],
+	2: [{"type": "r", "at": 1, "dir": "up"}, {"type": "s", "at": 3, "dir": "down"}],
+	3: [{"type": "r", "at": 2, "dir": "up"}, {"type": "s", "at": 3, "dir": "down"}],
+	4: [{"type": "r", "at": 1, "dir": "up"}, {"type": "s", "at": 4, "dir": "down"}],
+	5: [{"type": "r", "at": 2, "dir": "up"}, {"type": "s", "at": 4, "dir": "down"}, {"type": "r", "at": 1, "dir": "down"}],
 }
 const MAX_SUBLEVEL = 5
 
@@ -37,8 +45,8 @@ const CORRIDOR_LEN  = 3 * TILE      # gap between adjacent rooms (road length)
 const ROAD_COLOR    = Color(0.34, 0.32, 0.30)
 const ROAD_COLOR_2  = Color(0.28, 0.26, 0.25)
 
-const ROOM_CLEAR_HEAL   = 20
-const ROOM_CLEAR_ENERGY = 30
+const ROOM_CLEAR_HEAL   = 10
+const ROOM_CLEAR_ENERGY = 15
 
 var rooms:          Array = []
 var room_types:     Array = []
@@ -47,6 +55,8 @@ var sublevel_idx:   int   = 1
 var _current_gen:   int   = 0
 
 var player: CharacterBody2D = null
+var _portal: Area2D         = null
+var _portal_in_range: bool  = false
 
 @onready var hud: CanvasLayer = $HUD
 
@@ -71,6 +81,12 @@ func _ready():
 
 func _process(_delta: float):
 	if not is_instance_valid(player) or rooms.is_empty():
+		return
+	# Portal: enter the next sublevel only when the player presses Enter on it.
+	if _portal_in_range and is_instance_valid(_portal) and Input.is_action_just_pressed("ui_accept"):
+		_portal_in_range = false
+		_portal = null
+		_on_exit_entered()
 		return
 	for i in rooms.size():
 		if room_activated[i]:
@@ -110,52 +126,80 @@ func _load_sublevel(idx: int):
 	room_types.clear()
 	room_activated.clear()
 
-	var seq: Array = SUBLEVEL_SEQUENCES.get(idx, SUBLEVEL_SEQUENCES[1])
-	var types: Array = seq + ["b"]
+	var main: Array     = SUBLEVEL_MAIN.get(idx, SUBLEVEL_MAIN[1]).duplicate()
+	main.append("b")
+	var branches: Array = SUBLEVEL_BRANCHES.get(idx, [])
 
+	# ── Main path (horizontal) ───────────────────────────────────────────────
+	var main_pos: Array = []   # world top-left of each main room
 	var x_cursor := 0.0
-	for i in types.size():
-		var t: String = types[i]
+	for i in main.size():
+		var t: String = main[i]
 		var size: Vector2i = ROOM_SIZES.get(t, ROOM_SIZES["c"])
-		var spec := {
-			"type": _type_name(t),
-			"cols": size.x,
-			"rows": size.y,
-			"doors": {
-				"left":  i > 0,
-				"right": i < types.size() - 1,
-				"up": false, "down": false,
-			},
+		# Up/down doors when a branch attaches to this main room.
+		var has_up := false
+		var has_down := false
+		for b in branches:
+			if int(b["at"]) == i:
+				if b["dir"] == "up": has_up = true
+				else: has_down = true
+		var doors := {
+			"left": i > 0, "right": i < main.size() - 1,
+			"up": has_up, "down": has_down,
 		}
-
-		var room: Room = _instantiate_room(t)
-		add_child(room)
-		# Vertically centre so the door midpoint sits on CENTER_Y.
-		room.position = Vector2(x_cursor, CENTER_Y - (size.y / 2) * TILE)
-		room.build(spec, idx)
-
-		var ridx := i
-		var snap_gen := gen
-		room.all_enemies_dead.connect(func():
-			if _current_gen == snap_gen:
-				_on_room_cleared(ridx))
-
-		rooms.append(room)
-		room_types.append(t)
-		room_activated.append(false)
+		var ppos := Vector2(x_cursor, CENTER_Y - (size.y / 2) * TILE)
+		main_pos.append(ppos)
+		_add_room(t, size, doors, ppos, idx, gen)
 
 		x_cursor += size.x * TILE
-		if i < types.size() - 1:
+		if i < main.size() - 1:
 			_build_corridor(x_cursor, x_cursor + CORRIDOR_LEN)
 			x_cursor += CORRIDOR_LEN
 
-	# Place the player in the centre of the start room.
+	# ── Branch rooms (vertical detours) ──────────────────────────────────────
+	for b in branches:
+		var at: int = int(b["at"])
+		var dir: String = b["dir"]
+		var bt: String = b["type"]
+		var bsize: Vector2i = ROOM_SIZES.get(bt, ROOM_SIZES["r"])
+		var msize: Vector2i = ROOM_SIZES.get(main[at], ROOM_SIZES["c"])
+		var mp: Vector2 = main_pos[at]
+		var main_mid := msize.x / 2
+		var branch_mid := bsize.x / 2
+		var bx := mp.x + float(main_mid - branch_mid) * TILE
+		var door_cx := mp.x + float(main_mid) * TILE
+		var bdoors := {"left": false, "right": false,
+					   "up": dir == "down", "down": dir == "up"}
+		if dir == "up":
+			var by := mp.y - CORRIDOR_LEN - bsize.y * TILE
+			_add_room(bt, bsize, bdoors, Vector2(bx, by), idx, gen)
+			_build_vertical_corridor(door_cx, mp.y - CORRIDOR_LEN, mp.y)
+		else:
+			var by2 := mp.y + msize.y * TILE + CORRIDOR_LEN
+			_add_room(bt, bsize, bdoors, Vector2(bx, by2), idx, gen)
+			_build_vertical_corridor(door_cx, mp.y + msize.y * TILE, by2)
+
+	# Place the player in the centre of the start room (main[0]).
 	if is_instance_valid(player) and rooms.size() > 0:
 		player.global_position = rooms[0].get_center_world()
 		player.z_index = 1
 
 	hud.show_boss_bar(false)
 	hud.show_sublevel_title("第 %d 关" % idx)
+
+func _add_room(code: String, size: Vector2i, doors: Dictionary, ppos: Vector2, idx: int, gen: int):
+	var spec := {"type": _type_name(code), "cols": size.x, "rows": size.y, "doors": doors}
+	var room: Room = _instantiate_room(code)
+	add_child(room)
+	room.position = ppos
+	room.build(spec, idx)
+	var ridx := rooms.size()
+	room.all_enemies_dead.connect(func():
+		if _current_gen == gen:
+			_on_room_cleared(ridx))
+	rooms.append(room)
+	room_types.append(code)
+	room_activated.append(false)
 
 func _type_name(code: String) -> String:
 	match code:
@@ -214,6 +258,28 @@ func _corridor_wall(holder: Node2D, tx: int, ty: int):
 	sb.add_child(col)
 	holder.add_child(sb)
 
+# Carves a 2-tile-wide vertical road between y_top and y_bottom, centred on the
+# door column boundary at world-x `cx`, walled on both sides.
+func _build_vertical_corridor(cx: float, y_top: float, y_bottom: float):
+	var holder = Node2D.new()
+	holder.add_to_group("level_geometry")
+	add_child(holder)
+
+	var bx := int(round(cx / TILE))          # tile boundary; floor cols straddle it
+	var tx_left := bx - 1
+	var tx_right := bx
+	var ty0 := int(round(y_top / TILE))
+	var ty1 := int(round(y_bottom / TILE))
+	for ty in range(ty0, ty1):
+		for tx in [tx_left, tx_right]:
+			var cr = ColorRect.new()
+			cr.color    = ROAD_COLOR if (tx + ty) % 2 == 0 else ROAD_COLOR_2
+			cr.size     = Vector2(TILE, TILE)
+			cr.position = Vector2(tx * TILE, ty * TILE)
+			holder.add_child(cr)
+		_corridor_wall(holder, tx_left - 1, ty)
+		_corridor_wall(holder, tx_right + 1, ty)
+
 # ── Room activation ───────────────────────────────────────────────────────────
 
 func _activate_room(i: int):
@@ -266,9 +332,17 @@ func _spawn_exit_portal(boss_room: Room):
 	lbl.add_theme_font_size_override("font_size", 13)
 	lbl.position = Vector2(-24, -56)
 	portal.add_child(lbl)
+	var prompt = Label.new()
+	prompt.name = "Prompt"
+	prompt.text = "[Enter] 进入"
+	prompt.add_theme_font_size_override("font_size", 12)
+	prompt.add_theme_color_override("font_color", Color(1, 0.95, 0.4))
+	prompt.position = Vector2(-34, 40)
+	prompt.visible = false
+	portal.add_child(prompt)
 	var col = CollisionShape2D.new()
 	var rect = RectangleShape2D.new()
-	rect.size = Vector2(52, 68)
+	rect.size = Vector2(56, 72)
 	col.shape = rect
 	portal.add_child(col)
 	add_child(portal)
@@ -277,11 +351,16 @@ func _spawn_exit_portal(boss_room: Room):
 	tw.tween_property(vis, "modulate:a", 0.45, 0.55)
 	tw.tween_property(vis, "modulate:a", 1.00, 0.55)
 
-	var snap_gen := _current_gen
+	# Entering requires pressing Enter while standing on the portal (not auto-trigger).
+	_portal = portal
 	portal.body_entered.connect(func(body):
-		if body.is_in_group("player") and _current_gen == snap_gen:
-			portal.collision_mask = 0
-			_on_exit_entered())
+		if body.is_in_group("player"):
+			_portal_in_range = true
+			prompt.visible = true)
+	portal.body_exited.connect(func(body):
+		if body.is_in_group("player"):
+			_portal_in_range = false
+			prompt.visible = false)
 
 func _on_exit_entered():
 	sublevel_idx += 1

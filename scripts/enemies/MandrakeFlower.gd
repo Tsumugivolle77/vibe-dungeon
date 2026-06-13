@@ -180,8 +180,12 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dicti
 		return
 	hp -= amount
 	emit_signal("boss_hp_changed", hp, max_hp)
-	body_rect.modulate = Color.RED
+	var flash_target: CanvasItem = sprite if sprite else body_rect
+	flash_target.modulate = Color(1.8, 0.35, 0.35)
 	var t = create_tween()
-	t.tween_property(body_rect, "modulate", Color.WHITE, 0.15)
+	t.tween_property(flash_target, "modulate", Color.WHITE, 0.15)
 	if hp <= 0.0:
 		_die()
+
+func _on_die_extra():
+	spawn_weapon_pickup("mandrake_rod")

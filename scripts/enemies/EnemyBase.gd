@@ -190,20 +190,21 @@ func _die():
 	emit_signal("died", global_position, xp_value)
 	GameManager.add_score(xp_value * 10)
 
-	# Drop gold
-	var gold_amount = randi_range(gold_drop_min, gold_drop_max)
+	# Drop gold (reduced) — not every kill drops, and amounts are small.
+	var gold_amount = int(randi_range(gold_drop_min, gold_drop_max) * 0.5)
 	if is_boss_mode:
-		gold_amount *= 3
-	for i in min(gold_amount, 5):
-		var offset = Vector2(randf_range(-20, 20), randf_range(-20, 20))
-		Pickup.spawn(get_parent(), global_position + offset, Pickup.Type.GOLD, ceil(float(gold_amount) / 5.0))
+		gold_amount *= 2
+	if gold_amount > 0:
+		for i in min(gold_amount, 3):
+			var offset = Vector2(randf_range(-18, 18), randf_range(-18, 18))
+			Pickup.spawn(get_parent(), global_position + offset, Pickup.Type.GOLD, ceil(float(gold_amount) / 3.0))
 
-	# Health orbs can drop from anyone.
-	if randf() < 0.25:
-		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 12)
+	# Health orbs can drop from anyone (rarer, smaller).
+	if randf() < 0.16:
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 6)
 	# Energy orbs ("子弹") drop ONLY from elite monsters (and boss-mode variants).
-	if (is_elite or is_boss_mode) and randf() < 0.7:
-		Pickup.spawn(get_parent(), global_position + Vector2(8, 0), Pickup.Type.AMMO_ORB, 10)
+	if (is_elite or is_boss_mode) and randf() < 0.6:
+		Pickup.spawn(get_parent(), global_position + Vector2(8, 0), Pickup.Type.AMMO_ORB, 6)
 
 	$CollisionShape2D.set_deferred("disabled", true)
 	hitbox.set_deferred("monitoring", false)
@@ -211,6 +212,33 @@ func _die():
 	t.tween_property(self, "modulate:a", 0.0, 0.4)
 	t.tween_callback(queue_free)
 	_on_die_extra()
+
+# Spawns an [Enter]-collectable weapon pickup at this enemy's position.
+func spawn_weapon_pickup(wid: String):
+	var area = Area2D.new()
+	area.add_to_group("weapon_pickup")
+	area.collision_layer = 0
+	area.collision_mask  = 2
+	area.global_position = global_position
+	area.set_meta("weapon_id", wid)
+	area.add_child(PixelArt.sprite_from(PixelArt.make_weapon_icon(wid)))
+	var lbl = Label.new()
+	lbl.text = "★ " + WeaponDatabase.get_weapon(wid).get("name", "?")
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.1))
+	lbl.position = Vector2(-30, -26)
+	area.add_child(lbl)
+	var hint = Label.new()
+	hint.text = "[Enter]"
+	hint.add_theme_font_size_override("font_size", 9)
+	hint.position = Vector2(-14, 18)
+	area.add_child(hint)
+	var col = CollisionShape2D.new()
+	var c = CircleShape2D.new()
+	c.radius = 20.0
+	col.shape = c
+	area.add_child(col)
+	get_parent().add_child(area)
 
 func _on_die_extra():
 	pass

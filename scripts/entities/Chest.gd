@@ -56,30 +56,29 @@ func _open(player: Node2D):
 	_scatter_contents(player)
 
 func _scatter_contents(_player: Node2D):
-	# Gold (always) – 5-20 coins
-	var gold_amount = randi_range(5, 20)
+	# Gold (always) – 3-9 coins
+	var gold_amount = randi_range(3, 9)
 	Pickup.spawn(get_parent(), global_position, Pickup.Type.GOLD, gold_amount)
 
-	# Ammo orbs (always) – 3 orbs
-	for i in 3:
-		var offset = Vector2(randf_range(-30, 30), randf_range(-30, 30))
-		Pickup.spawn(get_parent(), global_position + offset, Pickup.Type.AMMO_ORB, 15)
+	# Ammo orb (always) – 1 orb
+	Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-24, 24), randf_range(-24, 24)),
+		Pickup.Type.AMMO_ORB, 10)
 
-	# Health pack (40% chance)
-	if randf() < 0.4:
+	# Health pack (30% chance)
+	if randf() < 0.3:
 		Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-25,25), -20),
-			Pickup.Type.HEALTH_PACK, 30)
+			Pickup.Type.HEALTH_PACK, 16)
 
-	# Ammo pack (25% chance)
-	if randf() < 0.25:
+	# Ammo pack (20% chance)
+	if randf() < 0.2:
 		Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-25,25), 20),
 			Pickup.Type.AMMO_PACK, 0)
 
-	# Random weapon (30% chance)
+	# Random common weapon (30% chance) — never rare/boss-exclusive
 	if randf() < 0.30:
-		var all_ids = WeaponDatabase.get_all_weapon_ids()
-		var wid = all_ids[randi() % all_ids.size()]
-		_spawn_weapon_pickup(wid)
+		var ids = WeaponDatabase.get_all_weapon_ids().filter(
+			func(id): return not WeaponDatabase.get_weapon(id).get("props", {}).get("rare", false))
+		_spawn_weapon_pickup(ids[randi() % ids.size()])
 
 	# Destroy chest visual
 	await get_tree().create_timer(0.3).timeout

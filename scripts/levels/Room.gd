@@ -56,6 +56,22 @@ const BOSS_BY_SUBLEVEL = {
 
 # ── Construction ──────────────────────────────────────────────────────────────
 
+# Safety net: any enemy that ends up outside the room walls (e.g. a boss minion
+# spawned into a corner, or one shoved through a gap) takes "suffocation" damage so
+# it dies and gets counted — never leaving the room un-clearable.
+func _process(delta: float):
+	if cleared or not combat_started or data.is_empty():
+		return
+	var w := data.cols * TILE_SIZE
+	var h := data.rows * TILE_SIZE
+	for e in get_children():
+		if not (e is Node2D) or not e.is_in_group("enemy") or not is_instance_valid(e):
+			continue
+		var p: Vector2 = e.position
+		if p.x < -8.0 or p.y < -8.0 or p.x > w + 8.0 or p.y > h + 8.0:
+			if e.has_method("take_damage"):
+				e.take_damage(90.0 * delta)
+
 func build(spec: Dictionary, sublevel: int):
 	room_type    = spec.get("type", "combat")
 	sublevel_idx = sublevel
@@ -70,12 +86,22 @@ func _build_floors():
 	var floor_node = Node2D.new()
 	floor_node.name = "Floors"
 	add_child(floor_node)
+	var alt := FLOOR_COLOR.darkened(0.08)
 	for tile in data.floors:
 		var cr = ColorRect.new()
-		cr.color    = FLOOR_COLOR
+		cr.color    = FLOOR_COLOR if (tile.x + tile.y) % 2 == 0 else alt   # checker
 		cr.size     = Vector2(TILE_SIZE, TILE_SIZE)
 		cr.position = Vector2(tile.x * TILE_SIZE, tile.y * TILE_SIZE)
 		floor_node.add_child(cr)
+		# Scattered moss / pebble detail for texture.
+		if randf() < 0.12:
+			var d = ColorRect.new()
+			var s = randf_range(8.0, 16.0)
+			d.size  = Vector2(s, s)
+			d.position = cr.position + Vector2(randf_range(4, TILE_SIZE - s - 4),
+											   randf_range(4, TILE_SIZE - s - 4))
+			d.color = FLOOR_COLOR.lightened(0.14) if randf() < 0.5 else FLOOR_COLOR.darkened(0.2)
+			floor_node.add_child(d)
 
 func _build_walls():
 	var wall_node = Node2D.new()
@@ -88,10 +114,16 @@ func _build_walls():
 		sb.position = Vector2(tile.x * TILE_SIZE + TILE_SIZE * 0.5,
 							  tile.y * TILE_SIZE + TILE_SIZE * 0.5)
 		var cr = ColorRect.new()
-		cr.color    = WALL_COLOR
+		cr.color    = WALL_COLOR if (tile.x + tile.y) % 2 == 0 else WALL_COLOR.lightened(0.07)
 		cr.size     = Vector2(TILE_SIZE, TILE_SIZE)
 		cr.position = -Vector2(TILE_SIZE, TILE_SIZE) * 0.5
 		sb.add_child(cr)
+		# Top highlight edge for a bit of depth.
+		var edge = ColorRect.new()
+		edge.color = WALL_COLOR.lightened(0.18)
+		edge.size  = Vector2(TILE_SIZE, 5)
+		edge.position = -Vector2(TILE_SIZE, TILE_SIZE) * 0.5
+		sb.add_child(edge)
 		var col = CollisionShape2D.new()
 		var rect = RectangleShape2D.new()
 		rect.size = Vector2(TILE_SIZE, TILE_SIZE)

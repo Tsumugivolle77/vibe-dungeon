@@ -31,10 +31,10 @@ func _build_shop():
 	common_ids.shuffle()
 
 	var items = []
-	items.append({"kind": "weapon", "id": common_ids[0], "price": 50})
-	items.append({"kind": "weapon", "id": common_ids[1], "price": 50})
-	items.append({"kind": "health_pack", "id": "",        "price": 20})
-	items.append({"kind": "ammo_pack",   "id": "",        "price": 15})
+	items.append({"kind": "weapon", "id": common_ids[0], "price": 75})
+	items.append({"kind": "weapon", "id": common_ids[1], "price": 75})
+	items.append({"kind": "health_pack", "id": "",        "price": 35})
+	items.append({"kind": "ammo_pack",   "id": "",        "price": 30})
 
 	for i in items.size():
 		var offset = Vector2((i - 1.5) * ITEM_SPREAD_X, -80.0)
@@ -121,10 +121,10 @@ func _try_buy(player: Node, item_node: Node2D, data: Dictionary):
 				player.pick_up_weapon(data.id)
 		"health_pack":
 			if player.has_method("heal"):
-				player.heal(40)
+				player.heal(25)
 		"ammo_pack":
 			if player.has_method("restore_energy"):
-				player.restore_energy(60)
+				player.restore_energy(35)
 
 	item_node.queue_free()
 	_shop_items.erase(item_node)
