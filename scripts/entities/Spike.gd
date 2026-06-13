@@ -3,7 +3,7 @@ extends Area2D
 # Spike terrain: hurts the player standing on it (10 damage every 0.5s). Does not
 # block movement (it's a floor hazard).
 
-const DAMAGE   = 10.0
+const DAMAGE   = 20.0
 const INTERVAL = 0.5
 
 var _player_on: bool = false

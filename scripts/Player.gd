@@ -24,8 +24,8 @@ var alive: bool = true
 var invincible: bool = false
 
 # Shield: absorbs damage before HP; regenerates over time (1 per 0.1s = 10/s).
-const MAX_SHIELD            = 50.0
-const SHIELD_REGEN          = 10.0   # per second
+const MAX_SHIELD            = 10.0
+const SHIELD_REGEN          = 5.0   # per second
 const SHIELD_RECHARGE_DELAY = 1.2    # seconds after a hit before regen resumes
 var shield: float           = MAX_SHIELD
 var _shield_delay: float    = 0.0

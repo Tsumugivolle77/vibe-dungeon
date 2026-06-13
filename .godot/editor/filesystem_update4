@@ -1,2 +1,2 @@
-res://scripts/Player.gd
-res://scripts/levels/Room.gd
+res://scenes/MainMenu.tscn
+res://scenes/Main.tscn
