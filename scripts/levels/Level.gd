@@ -10,20 +10,8 @@ signal boss_hp_changed(hp: float, max_hp: float)
 # The MAIN path runs horizontally: start ("v") → combat ("c")… → boss ("b" appended).
 # BRANCHES hang off a main combat room via a vertical corridor (up/down door),
 # holding reward ("r") / shop ("s") rooms so the layout isn't a straight line.
-const SUBLEVEL_MAIN = {
-	1: ["v", "c", "c", "c"],
-	2: ["v", "c", "c", "c", "c"],
-	3: ["v", "c", "c", "c", "c"],
-	4: ["v", "c", "c", "c", "c", "c"],
-	5: ["v", "c", "c", "c", "c", "c"],
-}
-const SUBLEVEL_BRANCHES = {
-	1: [{"type": "r", "at": 2, "dir": "up"}],
-	2: [{"type": "r", "at": 1, "dir": "up"}, {"type": "s", "at": 3, "dir": "down"}],
-	3: [{"type": "r", "at": 2, "dir": "up"}, {"type": "s", "at": 3, "dir": "down"}],
-	4: [{"type": "r", "at": 1, "dir": "up"}, {"type": "s", "at": 4, "dir": "down"}],
-	5: [{"type": "r", "at": 2, "dir": "up"}, {"type": "s", "at": 4, "dir": "down"}, {"type": "r", "at": 1, "dir": "down"}],
-}
+# The layout (room count, sizes, and branch placement) is generated RANDOMLY on
+# every load via _generate_layout(), so no two playthroughs share a map.
 const MAX_SUBLEVEL = 5
 
 const BOSS_NAMES = {
@@ -128,16 +116,27 @@ func _load_sublevel(idx: int):
 	room_types.clear()
 	room_activated.clear()
 
-	var main: Array     = SUBLEVEL_MAIN.get(idx, SUBLEVEL_MAIN[1]).duplicate()
+	var layout := _generate_layout(idx)
+	var main: Array     = layout["main"]
 	main.append("b")
-	var branches: Array = SUBLEVEL_BRANCHES.get(idx, [])
+	var branches: Array = layout["branches"]
+
+	# Pre-compute each main room's size. Combat rooms get randomised dimensions for
+	# variety; row counts stay ODD so edge-midpoint doors line up with the corridors.
+	var sizes: Array = []
+	for mi in main.size():
+		var mt: String = main[mi]
+		if mt == "c":
+			sizes.append(Vector2i(int([11, 13, 15].pick_random()), int([9, 11].pick_random())))
+		else:
+			sizes.append(ROOM_SIZES.get(mt, ROOM_SIZES["c"]))
 
 	# ── Main path (horizontal) ───────────────────────────────────────────────
 	var main_pos: Array = []   # world top-left of each main room
 	var x_cursor := 0.0
 	for i in main.size():
 		var t: String = main[i]
-		var size: Vector2i = ROOM_SIZES.get(t, ROOM_SIZES["c"])
+		var size: Vector2i = sizes[i]
 		# Up/down doors when a branch attaches to this main room.
 		var has_up := false
 		var has_down := false
@@ -164,7 +163,7 @@ func _load_sublevel(idx: int):
 		var dir: String = b["dir"]
 		var bt: String = b["type"]
 		var bsize: Vector2i = ROOM_SIZES.get(bt, ROOM_SIZES["r"])
-		var msize: Vector2i = ROOM_SIZES.get(main[at], ROOM_SIZES["c"])
+		var msize: Vector2i = sizes[at]
 		var mp: Vector2 = main_pos[at]
 		var main_mid := msize.x / 2
 		var branch_mid := bsize.x / 2
@@ -188,6 +187,52 @@ func _load_sublevel(idx: int):
 
 	hud.show_boss_bar(false)
 	hud.show_sublevel_title("第 %d 关" % idx)
+
+# Randomly lays out a sublevel: a start room, a random number of combat rooms, and
+# 1–2 reward/shop branch rooms hung off DISTINCT, NON-ADJACENT combat rooms (so the
+# vertical detours never crowd each other). Total room count lands in 5–7 per
+# CLAUDE.md. Returns { "main": [codes…], "branches": [{type, at, dir}…] }.
+func _generate_layout(idx: int) -> Dictionary:
+	var combat_count := randi_range(2, 4)
+	var n_branch := randi_range(1, 2)
+	# Keep the total (start + combat + boss + branches) within the 5–7 range.
+	if 2 + combat_count + n_branch > 7:
+		n_branch = 7 - 2 - combat_count
+	n_branch = max(n_branch, 1)
+
+	var main: Array = ["v"]
+	for i in combat_count:
+		main.append("c")
+
+	# Candidate combat-room indices (1..combat_count); choose non-adjacent ones.
+	var slots: Array = []
+	for i in range(1, combat_count + 1):
+		slots.append(i)
+	slots.shuffle()
+	var chosen: Array = []
+	for s in slots:
+		var ok := true
+		for c in chosen:
+			if abs(int(c) - int(s)) <= 1:
+				ok = false
+				break
+		if ok:
+			chosen.append(int(s))
+		if chosen.size() >= n_branch:
+			break
+
+	# First branch is always a reward room (三选一); later ones may be shops.
+	var branches: Array = []
+	for j in chosen.size():
+		var btype := "r"
+		if j == 1:
+			btype = "s" if randf() < 0.7 else "r"
+		elif j >= 2:
+			btype = "s" if randf() < 0.4 else "r"
+		var bdir := "up" if randf() < 0.5 else "down"
+		branches.append({"type": btype, "at": chosen[j], "dir": bdir})
+
+	return {"main": main, "branches": branches}
 
 func _add_room(code: String, size: Vector2i, doors: Dictionary, ppos: Vector2, idx: int, gen: int):
 	var spec := {"type": _type_name(code), "cols": size.x, "rows": size.y, "doors": doors}

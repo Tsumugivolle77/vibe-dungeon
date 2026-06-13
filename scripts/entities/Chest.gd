@@ -68,7 +68,7 @@ func _scatter_contents(_player: Node2D):
 	# Health pack (30% chance)
 	if randf() < 0.3:
 		Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-25,25), -20),
-			Pickup.Type.HEALTH_PACK, 16)
+			Pickup.Type.HEALTH_PACK, 40)
 
 	# Ammo pack (20% chance)
 	if randf() < 0.2:

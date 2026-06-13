@@ -138,6 +138,10 @@ func _on_area(area: Area2D):
 func _on_body(body: Node2D):
 	if body.is_in_group("crate") and body.has_method("take_damage"):
 		body.take_damage(damage)
+		# Explosive weapons also detonate their own blast on obstacles, not just enemies.
+		if weapon_props.get("explosive"):
+			_explode()
+			return
 		if not weapon_props.get("piercing", false):
 			_destroy()
 		return

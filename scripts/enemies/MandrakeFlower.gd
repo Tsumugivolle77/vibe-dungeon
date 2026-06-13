@@ -58,7 +58,7 @@ func _boss_drop():
 	for s in sides:
 		Pickup.spawn(get_parent(), global_position + s, Pickup.Type.AMMO_ORB, 14)
 	if randf() < 0.5:
-		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 15)
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 35)
 
 func _check_phase_transition():
 	var ratio = hp / max_hp
@@ -153,13 +153,33 @@ func _vine_sweep():
 
 func _phase3_action():
 	action_timer = 2.7
-	match randi() % 4:
+	match randi() % 5:
 		0: _start_laser_sweep()
 		1: _rapid_petal_storm()
 		2: _poison_nova()
 		3:
 			_petal_ring(12)
 			_summon_minions()
+		4: _teleport_strike()
+
+# Displacement: the flower sinks into the soil and re-emerges beside the player,
+# immediately spitting a poison ring outward.
+func _teleport_strike():
+	if not is_instance_valid(player):
+		return
+	var ang := randf() * TAU
+	var dest := player.global_position + Vector2(cos(ang), sin(ang)) * 210.0
+	var vis: CanvasItem = sprite if sprite else body_rect
+	var t := create_tween()
+	t.tween_property(vis, "modulate:a", 0.12, 0.14)
+	t.tween_callback(func(): global_position = dest)
+	t.tween_property(vis, "modulate:a", 1.0, 0.14)
+	await t.finished
+	if not is_inside_tree():
+		return
+	for i in 12:
+		var a := TAU * float(i) / 12.0
+		shoot(Vector2(cos(a), sin(a)), 185.0, damage * 0.8, {"kind": "poison"})
 
 func _start_laser_sweep():
 	if not is_instance_valid(player):

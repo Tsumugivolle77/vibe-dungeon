@@ -24,7 +24,7 @@ var alive: bool = true
 var invincible: bool = false
 
 # Shield: absorbs damage before HP; regenerates over time (1 per 0.1s = 10/s).
-const MAX_SHIELD            = 10.0
+const MAX_SHIELD            = 15.0
 const SHIELD_REGEN          = 5.0   # per second
 const SHIELD_RECHARGE_DELAY = 1.2    # seconds after a hit before regen resumes
 var shield: float           = MAX_SHIELD
@@ -65,6 +65,9 @@ var _weapon_sprite: Sprite2D = null
 
 func _ready():
 	add_to_group("player")
+	# Ensure the bullet-receiving hitbox is reliably in its group (a scene-set group
+	# can be missed) so enemy bullets register hits on the player body.
+	$PlayerHitbox.add_to_group("player_hitbox")
 	melee_hitbox.monitoring = false
 	GameManager.player_ref = self
 

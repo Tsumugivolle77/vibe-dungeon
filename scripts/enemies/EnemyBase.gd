@@ -204,7 +204,7 @@ func _die():
 
 	# Health orbs can drop from anyone (rarer, smaller).
 	if randf() < 0.16:
-		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 6)
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 18)
 	# Energy orbs ("子弹") drop ONLY from elite monsters (and boss-mode variants),
 	# but generously so the player can afford their powerful weapons.
 	if (is_elite or is_boss_mode) and randf() < 0.9:

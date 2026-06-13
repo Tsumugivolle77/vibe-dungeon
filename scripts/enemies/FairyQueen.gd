@@ -86,16 +86,9 @@ func _spiral_volley():
 func _blink():
 	if not is_instance_valid(player):
 		return
-	# Teleport to a point offset from the player, then fan a burst
+	# Teleport to a point offset from the player, then fan a burst.
 	var ang := randf() * TAU
 	var dest := player.global_position + Vector2(cos(ang), sin(ang)) * preferred_dist
-	if sprite:
-		var t := create_tween()
-		t.tween_property(sprite, "modulate:a", 0.1, 0.12)
-		t.tween_callback(func(): global_position = dest)
-		t.tween_property(sprite, "modulate:a", 1.0, 0.12)
-	else:
-		global_position = dest
-	await get_tree().create_timer(0.28).timeout
+	await teleport_to(dest)
 	if is_inside_tree() and alive:
 		ring(8, 220.0)

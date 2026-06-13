@@ -121,7 +121,7 @@ func _try_buy(player: Node, item_node: Node2D, data: Dictionary):
 				player.pick_up_weapon(data.id)
 		"health_pack":
 			if player.has_method("heal"):
-				player.heal(25)
+				player.heal(60)
 		"ammo_pack":
 			if player.has_method("restore_energy"):
 				player.restore_energy(55)

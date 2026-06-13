@@ -35,19 +35,20 @@ func _boss_ai(_delta: float):
 			else:
 				aimed_spread(5, 14.0, 200.0)   # seed volley
 		2:
-			action_timer = 2.8
-			if randi() % 2 == 0:
-				_spiral_seeds()
-			else:
-				summon(SPIRIT_SCENE, 2)
-		3:
-			action_timer = 2.4
+			action_timer = 2.9
 			match randi() % 3:
+				0: _spiral_seeds()
+				1: summon(SPIRIT_SCENE, 2)
+				2: vine_field(6)                       # vines burst from the ground
+		3:
+			action_timer = 2.5
+			match randi() % 4:
 				0: _spiral_seeds()
 				1:
 					ring(14, 150.0)
 					ring(14, 200.0, -1.0, deg_to_rad(12.0))
 				2: summon(MUSHROOM_SCENE, 2)
+				3: vine_field(11)                      # dense vine field, few safe gaps
 
 func _spiral_seeds():
 	for i in 12:

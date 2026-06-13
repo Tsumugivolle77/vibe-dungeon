@@ -50,11 +50,18 @@ func _boss_ai(delta: float):
 				2: meteor_storm(6)                                # berserk: meteor rain
 		3:
 			action_timer = 2.8
-			match randi() % 4:
+			match randi() % 5:
 				0: _charge()
 				1: ring(10, 220.0)
 				2: summon(GOBLIN_SCENE, 3)
 				3: meteor_storm(14)                               # mass meteors, few safe spots
+				4: _leap_smash()                                  # jump onto the player, slam
+
+# Leaps directly onto the player and slams the ground (distinct from the dash).
+func _leap_smash():
+	if not is_instance_valid(player):
+		return
+	leap_to(player.global_position, 12, 230.0, damage * 1.2)
 
 func _on_phase(p: int):
 	if p == 2:

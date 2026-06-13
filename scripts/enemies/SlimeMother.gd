@@ -37,16 +37,24 @@ func _boss_ai(delta: float):
 			ring(8, 160.0, -1.0, randf() * TAU)
 		2:
 			action_timer = 2.8
-			if randi() % 2 == 0:
-				_double_ring()
-			else:
-				summon(SLIME_SCENE, 3)
-		3:
-			action_timer = 2.2
 			match randi() % 3:
+				0: _double_ring()
+				1: summon(SLIME_SCENE, 3)
+				2: _slam_leap()
+		3:
+			action_timer = 2.4
+			match randi() % 4:
 				0: _double_ring()
 				1: ring(16, 180.0, -1.0, randf() * TAU)
 				2: summon(SLIME_SCENE, 4)
+				3: _slam_leap()
+
+# Berserk displacement: heave the whole gelatinous body onto the player and slam,
+# bursting a dense bullet ring outward on landing.
+func _slam_leap():
+	if not is_instance_valid(player):
+		return
+	leap_to(player.global_position, 14, 200.0)
 
 func _double_ring():
 	ring(10, 150.0, -1.0, 0.0)
