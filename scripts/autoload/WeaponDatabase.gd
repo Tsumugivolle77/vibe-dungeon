@@ -45,7 +45,7 @@ func _ready():
 	_register_ranged("plasma_gun",      "等离子枪",   40,  1.5, 400, 3,  0,  3,  {"bouncing": true, "max_bounces": 3, "element": "plasma"})
 	_register_ranged("minigun",         "加特林",     20,   15.0,480, 5,  5,  1,  {"windup": true, "windup_time": 1.0})
 	_register_ranged("railgun",         "轨道炮",     40, 0.3, 900, 1,  0,  10, {"laser": true, "piercing": true})
-	_register_ranged("holy_staff",      "神圣法杖",   28,  1.4, 250, 3,  16, 3,  {"homing": true, "element": "holy", "trail": true})
+	_register_ranged("holy_staff",      "神圣法杖",   28,  1.4, 250, 8,  16, 5,  {"homing": true, "element": "holy", "trail": true})
 
 	# ── 稀有精英掉落武器 ──────────────────────────────────────────────────────
 	_register_ranged("void_cannon",  "虚空炮",    40, 0.4, 620, 3, 0,  10, {"piercing": true, "explosive": true, "explosion_radius": 150.0, "rare": true})
