@@ -16,7 +16,7 @@ signal boss_armor_changed(armor: float, max_armor: float)
 const MAX_SUBLEVEL = 5
 
 const BOSS_NAMES = {
-	1: "哥布林王", 2: "史莱姆之母", 3: "远古树妖", 4: "精灵女王", 5: "曼陀罗花",
+	1: "远古树妖", 2: "曼陀罗花", 3: "史莱姆之母", 4: "精灵女王", 5: "哥布林王",
 }
 
 # Room sizes in tiles (cols × rows). Start room is small & square.

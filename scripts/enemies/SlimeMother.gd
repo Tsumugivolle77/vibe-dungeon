@@ -87,19 +87,34 @@ func _boss_ai(delta: float):
 			ring(8, 160.0, -1.0, randf() * TAU)
 		2:
 			action_timer = 2.8
-			match randi() % 3:
+			match randi() % 4:
 				0: _double_ring()
 				1: summon(SLIME_SCENE, 3)
 				2: _slam_leap()
+				3: _acid_pools()
 		3:
 			action_timer = 2.4
-			match randi() % 4:
+			match randi() % 5:
 				0: _double_ring()
 				1:
 					cast_guard(2.5)                           # powerful skill: aegis up
 					ring(16, 180.0, -1.0, randf() * TAU)
 				2: summon(SLIME_SCENE, 4)
 				3: _slam_leap()
+				4: _acid_pools()
+
+# Signature: spits a few corrosive acid pools around the player (harmful green pools).
+func _acid_pools():
+	if not is_instance_valid(player):
+		return
+	for i in 3:
+		var pool = load("res://scripts/entities/LavaPool.gd").new()
+		pool.target_player     = true
+		pool.tint              = Color(0.40, 0.85, 0.25)
+		pool.lifetime_override = 3.5
+		get_parent().add_child(pool)
+		pool.global_position = clamp_to_room(
+			player.global_position + Vector2(randf_range(-90, 90), randf_range(-90, 90)))
 
 # Berserk displacement: heave the whole gelatinous body onto the player and slam,
 # bursting a dense bullet ring outward on landing.

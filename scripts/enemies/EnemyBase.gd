@@ -374,6 +374,28 @@ func shoot(dir: Vector2, spd: float = 200.0, dmg: float = -1.0, props: Dictionar
 	if props.has("lifetime"): b.lifetime = props["lifetime"]
 	if props.has("bounce"):   b.bounces = props["bounce"]
 
+# A "closing ring" trap: bullets spawn in a ring AROUND the player and converge on
+# their position, leaving a small random gap to dodge through. Boss signature move.
+func closing_ring(count: int, radius: float, spd: float, dmg: float = -1.0, kind: String = ""):
+	if not is_instance_valid(player):
+		return
+	var center: Vector2 = player.global_position
+	var gap_start := randi() % count   # leave a 2-wide escape gap
+	for i in count:
+		if i == gap_start or i == (gap_start + 1) % count:
+			continue
+		var a := TAU * float(i) / float(count)
+		var pos := center + Vector2(cos(a), sin(a)) * radius
+		var b: Node = enemy_bullet_scene.instantiate()
+		get_parent().add_child(b)
+		b.global_position = pos
+		b.direction       = (center - pos).normalized()
+		b.speed           = spd
+		b.damage          = dmg if dmg >= 0 else damage
+		b.is_boss_bullet  = _is_boss_type() or is_boss_mode
+		if kind != "":
+			b.kind = kind
+
 func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dictionary = {}):
 	if not alive:
 		return

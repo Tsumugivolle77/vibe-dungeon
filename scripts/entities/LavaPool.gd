@@ -13,6 +13,7 @@ const RADIUS   = 40.0
 var target_player: bool    = false
 var lifetime_override: float = -1.0
 var radius_override: float  = -1.0
+var tint: Color            = Color(0, 0, 0, 0)   # if alpha>0, recolors the pool (e.g. acid)
 
 var _tick: float = 0.0
 var _life: float = LIFETIME
@@ -39,10 +40,13 @@ func _ready():
 	tw.tween_property(self, "scale", Vector2.ONE, 0.2).set_ease(Tween.EASE_OUT)
 
 func _build_visual():
-	var outer = _blob(_radius, Color(0.85, 0.28, 0.06, 0.7))
-	add_child(outer)
-	var inner = _blob(_radius * 0.6, Color(1.0, 0.62, 0.12, 0.85))
-	add_child(inner)
+	var outer_c := Color(0.85, 0.28, 0.06, 0.7)
+	var inner_c := Color(1.0, 0.62, 0.12, 0.85)
+	if tint.a > 0.0:
+		outer_c = Color(tint.r * 0.7, tint.g * 0.7, tint.b * 0.7, 0.7)
+		inner_c = Color(tint.r, tint.g, tint.b, 0.85)
+	add_child(_blob(_radius, outer_c))
+	add_child(_blob(_radius * 0.6, inner_c))
 
 func _blob(radius: float, col: Color) -> Polygon2D:
 	var poly = Polygon2D.new()

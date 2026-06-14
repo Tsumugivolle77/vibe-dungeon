@@ -189,7 +189,7 @@ func _vine_sweep():
 
 func _phase3_action():
 	action_timer = 2.7
-	match randi() % 5:
+	match randi() % 6:
 		0: _start_laser_sweep()
 		1: _rapid_petal_storm()
 		2: _poison_nova()
@@ -197,6 +197,11 @@ func _phase3_action():
 			_petal_ring(12)
 			_summon_minions()
 		4: _teleport_strike()
+		5: _poison_cage()
+
+# Signature: a converging cage of toxic bolts traps the player (dodge the gap).
+func _poison_cage():
+	closing_ring(16, 195.0, 150.0, damage * 0.8, "poison")
 
 # Displacement: the flower sinks into the soil and re-emerges beside the player,
 # immediately spitting a poison ring outward.

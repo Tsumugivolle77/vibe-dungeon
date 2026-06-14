@@ -41,19 +41,25 @@ func _boss_ai(delta: float):
 			aimed_spread(5, 12.0, 250.0)
 		2:
 			action_timer = 1.8
-			match randi() % 3:
+			match randi() % 4:
 				0: _spiral_volley()
 				1: ring(10, 200.0, -1.0, randf() * TAU)
 				2: _homing_volley()
+				3: _light_prison()               # signature: closing ring of light
 		3:
 			action_timer = 1.6
-			match randi() % 4:
+			match randi() % 5:
 				0: _spiral_volley()
 				1: _blink()
 				2:
 					cast_guard(2.4)                  # powerful skill: aegis while summoning
 					summon(FAIRY_SCENE, 2)
 				3: _homing_volley()
+				4: _light_prison()
+
+# Signature: a cage of light orbs converges on the player (dodge through the gap).
+func _light_prison():
+	closing_ring(18, 200.0, 165.0)
 
 # Fires a fan of slow homing orbs that chase the player, then expire.
 func _homing_volley():

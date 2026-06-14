@@ -50,11 +50,11 @@ const SUBLEVEL_POOLS = {
 
 # One distinct boss per sublevel; sublevel 5 = final boss (Mandrake).
 const BOSS_BY_SUBLEVEL = {
-	1: "res://scenes/enemies/GoblinKing.tscn",
-	2: "res://scenes/enemies/SlimeMother.tscn",
-	3: "res://scenes/enemies/AncientTreant.tscn",
+	1: "res://scenes/enemies/AncientTreant.tscn",
+	2: "res://scenes/enemies/MandrakeFlower.tscn",
+	3: "res://scenes/enemies/SlimeMother.tscn",
 	4: "res://scenes/enemies/FairyQueen.tscn",
-	5: "res://scenes/enemies/MandrakeFlower.tscn",
+	5: "res://scenes/enemies/GoblinKing.tscn",
 }
 
 # ── Construction ──────────────────────────────────────────────────────────────
