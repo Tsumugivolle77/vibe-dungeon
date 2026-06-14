@@ -191,7 +191,7 @@ func summon(scene_path: String, count: int, spread: float = 120.0):
 # A telegraphed meteor (天降陨石): the impact point is snapped to a grid tile, a dark
 # ground shadow grows there as a flaming rock plummets from the sky, and after
 # `delay` seconds it lands — damaging the player if still inside the blast radius.
-func meteor(target: Vector2, delay: float, radius: float = 58.0, dmg: float = 20.0):
+func meteor(target: Vector2, delay: float, radius: float = 58.0, dmg: float = 20.0, leave_lava: bool = false):
 	var parent = get_parent()
 	target = _snap_to_tile(target)   # meteors only land on grid cells ("格子")
 
@@ -232,6 +232,13 @@ func meteor(target: Vector2, delay: float, radius: float = 58.0, dmg: float = 20
 	t.tween_property(flash, "modulate:a", 0.0, 0.3)
 	t.tween_callback(flash.queue_free)
 	_meteor_impact_debris(target, radius)
+	# Some meteors leave a hostile lava pool that burns the player for a few seconds.
+	if leave_lava:
+		var lava = load("res://scripts/entities/LavaPool.gd").new()
+		lava.target_player = true
+		lava.lifetime_override = 3.0
+		parent.add_child(lava)
+		lava.global_position = target
 
 # Snaps a world position to the centre of its grid tile within the parent room.
 func _snap_to_tile(world_pos: Vector2) -> Vector2:
@@ -293,7 +300,7 @@ func _meteor_impact_debris(pos: Vector2, radius: float):
 
 # Rains meteors onto random distinct grid tiles, each with a 3s shadow telegraph,
 # leaving only a few safe gaps. Tiles near the player are preferred when available.
-func meteor_storm(count: int, spread_x: float = 280.0, spread_y: float = 190.0):
+func meteor_storm(count: int, spread_x: float = 280.0, spread_y: float = 190.0, leave_lava: bool = false):
 	var tiles: Array = _room_tile_centers()
 	if tiles.is_empty():
 		# Fallback (no room data): snap random offsets around the player to the grid.
@@ -301,7 +308,7 @@ func meteor_storm(count: int, spread_x: float = 280.0, spread_y: float = 190.0):
 			return
 		for i in count:
 			var off := Vector2(randf_range(-spread_x, spread_x), randf_range(-spread_y, spread_y))
-			meteor(player.global_position + off, 3.0, 54.0, 18.0)
+			meteor(player.global_position + off, 3.0, 54.0, 18.0, leave_lava)
 		return
 	# Prefer tiles within the spread box around the player so the rain stays a threat.
 	if is_instance_valid(player):
@@ -312,7 +319,7 @@ func meteor_storm(count: int, spread_x: float = 280.0, spread_y: float = 190.0):
 			tiles = near
 	tiles.shuffle()
 	for i in min(count, tiles.size()):
-		meteor(tiles[i], 3.0, 54.0, 18.0)
+		meteor(tiles[i], 3.0, 54.0, 18.0, leave_lava)
 
 # ── Displacement ───────────────────────────────────────────────────────────────
 

@@ -148,6 +148,26 @@ var slow_timer:  float = 0.0
 var dot_damage:  float = 0.0
 var dot_timer:   float = 0.0
 
+# ── Status effects (异常状态) ──────────────────────────────────────────────────
+# DoT statuses tick 5 damage every 0.3s; stun statuses (freeze/paralysis) make the
+# unit unable to act. All last 3s (halved on bosses). Stackable — each shows an icon.
+const STATUS_DURATION = 3.0
+const STATUS_TICK     = 0.3
+const STATUS_TICK_DMG = 5.0
+const DOT_STATUSES  = ["burn", "frostbite", "poison", "dark", "holy"]
+const STUN_STATUSES = ["freeze", "paralysis"]
+const STATUS_COLORS = {
+	"burn":      Color(1.00, 0.45, 0.10),
+	"frostbite": Color(0.55, 0.80, 1.00),
+	"freeze":    Color(0.75, 0.95, 1.00),
+	"poison":    Color(0.50, 0.85, 0.20),
+	"dark":      Color(0.45, 0.18, 0.62),
+	"holy":      Color(1.00, 0.95, 0.55),
+	"paralysis": Color(1.00, 0.90, 0.20),
+}
+var _statuses: Dictionary = {}     # type -> {"timer": float, "acc": float}
+var _status_icons: Node2D = null
+
 var player: Node2D = null
 var sprite: Node2D = null  # animated pixel-art overlay (AnimatedSprite2D when art exists)
 
@@ -209,7 +229,14 @@ func _physics_process(delta: float):
 	if not is_instance_valid(player):
 		_find_player()
 	_tick_status(delta)
-	_tick_ai(delta)
+	_tick_statuses(delta)
+	if not alive:
+		return
+	# Freeze / paralysis: the unit can't act or move while stunned.
+	if is_stunned():
+		velocity = Vector2.ZERO
+	else:
+		_tick_ai(delta)
 	if knockback_vel.length() > 1.0:
 		knockback_vel = knockback_vel.lerp(Vector2.ZERO, delta * 8.0)
 		velocity = knockback_vel
@@ -223,6 +250,71 @@ func _tick_status(delta: float):
 	if dot_timer > 0.0:
 		dot_timer -= delta
 		take_dot_damage(dot_damage * delta)
+
+# Applies (or refreshes) an abnormal status. Boss durations are halved.
+func apply_status(type: String, duration: float = -1.0):
+	if not alive or not (type in STATUS_COLORS):
+		return
+	var dur: float = duration if duration > 0.0 else STATUS_DURATION
+	if _is_boss_type() or is_boss_mode:
+		dur *= 0.5
+	var entry: Dictionary = _statuses.get(type, {"timer": 0.0, "acc": 0.0})
+	entry["timer"] = maxf(float(entry["timer"]), dur)
+	_statuses[type] = entry
+	_refresh_status_icons()
+
+func is_stunned() -> bool:
+	for s in STUN_STATUSES:
+		if _statuses.has(s):
+			return true
+	return false
+
+func _tick_statuses(delta: float):
+	if _statuses.is_empty():
+		return
+	var expired: Array = []
+	for type in _statuses.keys():
+		var e: Dictionary = _statuses[type]
+		e["timer"] = float(e["timer"]) - delta
+		if type in DOT_STATUSES:
+			e["acc"] = float(e["acc"]) + delta
+			while float(e["acc"]) >= STATUS_TICK:
+				e["acc"] = float(e["acc"]) - STATUS_TICK
+				take_dot_damage(STATUS_TICK_DMG)
+				if not alive:
+					return
+		if float(e["timer"]) <= 0.0:
+			expired.append(type)
+	for type in expired:
+		_statuses.erase(type)
+	if not expired.is_empty():
+		_refresh_status_icons()
+
+# A row of small coloured icons above the unit, one per active status.
+func _refresh_status_icons():
+	if _status_icons == null:
+		_status_icons = Node2D.new()
+		_status_icons.z_index = 7
+		add_child(_status_icons)
+	for c in _status_icons.get_children():
+		c.queue_free()
+	var keys: Array = _statuses.keys()
+	var n: int = keys.size()
+	if n == 0:
+		return
+	var sz := 9.0
+	var gap := 2.0
+	var top := body_size.y * 0.5
+	if is_instance_valid(sprite):
+		top = body_size.y * sprite.scale.y * 0.5
+	var y := -(top + 24.0)
+	var x0 := -(n * sz + (n - 1) * gap) * 0.5
+	for i in n:
+		var icon := ColorRect.new()
+		icon.size = Vector2(sz, sz)
+		icon.color = STATUS_COLORS.get(keys[i], Color.WHITE)
+		icon.position = Vector2(x0 + i * (sz + gap), y)
+		_status_icons.add_child(icon)
 
 # DoT is "true damage": it ignores armor AND boss invulnerability (so damage-over-
 # time keeps ticking through a golden aegis) and still updates the boss HP bar.

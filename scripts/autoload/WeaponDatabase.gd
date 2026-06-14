@@ -26,7 +26,7 @@ func _ready():
 	_register_ranged("pistol",          "手枪",       15,  2.0, 400, 1,  0,  0,  {})
 	_register_ranged("smg",             "冲锋枪",     15,  8.0, 450, 1,  5,  1,  {})
 	_register_ranged("machine_gun",     "机枪",       15,  10.0,500, 1,  3,  1,  {})
-	_register_ranged("revolver",        "左轮手枪",   25,  1.5, 450, 1,  0,  1,  {})
+	_register_ranged("revolver",        "左轮手枪",   35,  1.5, 450, 1,  0,  2,  {})
 	# Energy-cost ranged: powerful/special weapons
 	_register_ranged("shotgun",         "霰弹枪",     20,  1.0, 380, 6,  20, 3,  {})
 	_register_ranged("sniper",          "狙击枪",     50,  0.5, 800, 1,  0,  4,  {})
@@ -37,22 +37,22 @@ func _ready():
 	_register_ranged("lightning_staff", "闪电法杖",   20,  1.0, 300, 15, 0,  6,  {"ring": true, "bouncing": true, "max_bounces": 4, "element": "lightning", "trail": true})
 	_register_ranged("crossbow",        "弩",         25,  1.0, 500, 1,  0,  3,  {"piercing": true})
 	_register_ranged("grenade_launcher","榴弹炮",     35,  0.7, 250, 1,  0,  8, {"explosive": true, "bouncing": true, "explosion_radius": 80.0})
-	_register_ranged("star_requiem",    "星灭者",     35,  0.7, 250, 5,  0,  10, {"explosive": true, "bouncing": true, "explosion_radius": 100.0})
 	_register_ranged("flamethrower",    "火焰喷射器", 20,   15.0,200, 1,  15, 1,  {"continuous": true, "element": "fire"})
 	_register_ranged("laser_gun",       "激光枪",     30,  3.0, 650, 1,  0,  1,  {"laser": true})
 	_register_ranged("boomerang",       "回旋镖",     25,  1.5, 350, 1,  0,  4,  {"returns": true})
 	_register_ranged("bow",             "弓箭",       35,  1.0, 450, 1,  0,  2,  {"charged": true})
 	_register_ranged("plasma_gun",      "等离子枪",   40,  1.5, 400, 3,  0,  3,  {"bouncing": true, "max_bounces": 3, "element": "plasma"})
-	_register_ranged("minigun",         "加特林",     20,   15.0,480, 5,  5,  1,  {"windup": true, "windup_time": 1.0})
+	_register_ranged("minigun",         "加特林",     20,   15.0,480, 5,  5,  3,  {"windup": true, "windup_time": 1.0})
 	_register_ranged("railgun",         "轨道炮",     40, 0.3, 900, 1,  0,  10, {"laser": true, "piercing": true})
 	_register_ranged("holy_staff",      "神圣法杖",   28,  1.4, 250, 3,  16, 3,  {"homing": true, "element": "holy", "trail": true})
 
 	# ── 稀有精英掉落武器 ──────────────────────────────────────────────────────
-	_register_ranged("void_cannon",  "虚空炮",    40, 0.4, 620, 3, 0,  10, {"piercing": true, "explosive": true, "explosion_radius": 150.0, "rare": true})
-	_register_ranged("thunder_bow",  "雷鸣弓",    25,  0.9, 580, 3, 12, 4,  {"chain": true, "chain_range": 160.0, "element": "lightning", "rare": true})
-	_register_ranged("frozen_gale",  "冰霜疾风",  22,  1.2, 300, 5, 22, 2,  {"slow": true, "slow_factor": 0.12, "element": "ice", "rare": true})
-	_register_melee ("dragon_fang",  "龙牙",      30, 2.2, 115, 120, 4,  {"dash": true, "knockback": 350.0, "rare": true})
-	_register_melee ("holy_sword",   "圣剑",      30,  2.8, 105, 90,  3,  {"knockback": 280.0, "element": "holy", "rare": true})
+	_register_ranged("star_requiem", "星灭者",     35,  0.7, 250, 5,  0,  10, {"explosive": true, "bouncing": true, "explosion_radius": 100.0})
+	_register_ranged("void_cannon",  "虚空炮",    45, 0.4, 620, 3, 0,  10, {"piercing": true, "explosive": true, "explosion_radius": 150.0, "rare": true})
+	_register_ranged("thunder_bow",  "雷鸣弓",    35,  0.9, 580, 3, 12, 4,  {"chain": true, "chain_range": 160.0, "element": "lightning", "rare": true})
+	_register_ranged("frozen_gale",  "冰霜疾风",  32,  1.2, 300, 5, 22, 2,  {"slow": true, "slow_factor": 0.12, "element": "ice", "rare": true})
+	_register_melee ("dragon_fang",  "龙牙",      40, 2.2, 115, 120, 4,  {"dash": true, "knockback": 350.0, "rare": true})
+	_register_melee ("holy_sword",   "圣剑",      40,  2.8, 105, 90,  3,  {"knockback": 280.0, "element": "holy", "rare": true})
 
 	# ── Boss 专属稀有掉落 (one per boss) ───────────────────────────────────────
 	_register_melee ("kings_greataxe", "哥布林王巨斧", 45, 1.6, 135, 150, 5, {"knockback": 420.0, "lava_pool": true, "rare": true, "boss": true})

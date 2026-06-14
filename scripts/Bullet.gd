@@ -178,12 +178,20 @@ func _on_body(body: Node2D):
 
 func _apply_special_effects(enemy: Node2D):
 	var props = weapon_props
-	if props.get("fire_dot"):
-		if enemy.has_method("apply_dot"):
-			enemy.apply_dot(5.0, 3.0)
-	if props.get("slow"):
-		if enemy.has_method("apply_slow"):
-			enemy.apply_slow(props.get("slow_factor", 0.5), 2.0)
+	var elem: String = props.get("element", "")
+	# Elemental status afflictions (new 异常状态 system).
+	if enemy.has_method("apply_status"):
+		if props.get("fire_dot") or elem == "fire":
+			enemy.apply_status("burn")
+		if props.get("slow") or elem == "ice":
+			if randf() < 0.5:
+				enemy.apply_status("frostbite")
+			if randf() < 0.3:
+				enemy.apply_status("freeze")
+		if elem == "holy" and randf() < 0.5:
+			enemy.apply_status("holy")
+		if (props.get("chain") or elem == "lightning") and randf() < 0.4:
+			enemy.apply_status("paralysis")
 	if props.get("chain"):
 		_chain_lightning(enemy)
 	# Summon a friendly unit on hit (boss weapons): fairy / vine / slime.
@@ -230,6 +238,9 @@ func _explode():
 		var d = e.global_position.distance_to(global_position)
 		if d <= radius and e.has_method("take_damage"):
 			e.take_damage(damage * (1.0 - d / radius), (e.global_position - global_position).normalized() * 200.0)
+			# All shell/explosive blasts have a 50% chance to set the target alight.
+			if e.has_method("apply_status") and randf() < 0.5:
+				e.apply_status("burn")
 	# Visual flash (simple)
 	var flash = ColorRect.new()
 	flash.color = Color(1, 0.8, 0.2, 0.6)

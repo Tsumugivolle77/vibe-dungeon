@@ -47,10 +47,41 @@ func _build_shop():
 	_vend = node
 	_vend_text = text
 
-func _process(delta: float):
+func _process(_delta: float):
+	if not is_instance_valid(_vend):
+		return
+	var pl = GameManager.player_ref
+	var near: bool = is_instance_valid(pl) and pl.global_position.distance_to(_vend.global_position) < 95.0
 	# Reveal the machine's text only when the player is close.
-	if is_instance_valid(_vend) and is_instance_valid(_vend_text):
-		var pl = GameManager.player_ref
-		_vend_text.visible = is_instance_valid(pl) \
-			and pl.global_position.distance_to(_vend.global_position) < 95.0
-	super._process(delta)
+	if is_instance_valid(_vend_text):
+		_vend_text.visible = near
+	# Repeatable purchase: each buy dispenses a random weapon from the FULL pool.
+	# (We handle it here instead of ShopRoom._process so the machine isn't consumed.)
+	if near and Input.is_action_just_pressed("ui_accept") \
+			and pl.global_position.distance_to(_vend.global_position) < 70.0:
+		_buy_random_weapon(pl)
+
+func _buy_random_weapon(pl: Node):
+	if not GameManager.spend_gold(10):
+		var t := _vend.create_tween()
+		t.tween_property(_vend, "modulate", Color(1, 0.3, 0.3), 0.1)
+		t.tween_property(_vend, "modulate", Color.WHITE, 0.2)
+		return
+	# Full pool: every weapon, including rare/boss-exclusive ones.
+	var ids := WeaponDatabase.get_all_weapon_ids()
+	var id: String = ids[randi() % ids.size()]
+	if pl.has_method("pick_up_weapon"):
+		pl.pick_up_weapon(id)
+	_show_vend_result(WeaponDatabase.get_weapon(id).get("name", "?"))
+
+func _show_vend_result(wname: String):
+	var lbl := Label.new()
+	lbl.text = "获得 " + wname + "!"
+	lbl.add_theme_font_size_override("font_size", 13)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
+	lbl.position = _vend.position + Vector2(-40, -78)
+	add_child(lbl)
+	var t := lbl.create_tween()
+	t.tween_property(lbl, "position:y", lbl.position.y - 26, 0.9)
+	t.parallel().tween_property(lbl, "modulate:a", 0.0, 0.9)
+	t.tween_callback(lbl.queue_free)

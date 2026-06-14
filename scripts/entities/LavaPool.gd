@@ -8,12 +8,19 @@ const INTERVAL = 0.5
 const LIFETIME = 4.5
 const RADIUS   = 40.0
 
+# When true this is a HOSTILE pool (left by boss meteors) that burns the PLAYER;
+# otherwise it's a friendly pool (boss weapons) that burns enemies.
+var target_player: bool    = false
+var lifetime_override: float = -1.0
+
 var _tick: float = 0.0
 var _life: float = LIFETIME
 
 func _ready():
+	if lifetime_override > 0.0:
+		_life = lifetime_override
 	collision_layer = 0
-	collision_mask  = 8   # enemy bodies (layer 4)
+	collision_mask  = 2 if target_player else 8   # player (layer 2) vs enemy (layer 4)
 	monitoring = true
 	z_index = -1          # under units, above floor
 	var col = CollisionShape2D.new()
@@ -55,6 +62,7 @@ func _process(delta: float):
 	_tick -= delta
 	if _tick <= 0.0:
 		_tick = INTERVAL
+		var grp := "player" if target_player else "enemy"
 		for b in get_overlapping_bodies():
-			if is_instance_valid(b) and b.is_in_group("enemy") and b.has_method("take_damage"):
+			if is_instance_valid(b) and b.is_in_group(grp) and b.has_method("take_damage"):
 				b.take_damage(DAMAGE)
