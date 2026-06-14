@@ -39,6 +39,7 @@
 
 # High Priority
 ## 添加debug模式
+优化debug console的tab自动补全和联想功能
 /give [武器英文名]
 /invincible 角色无敌、无限蓝
 /tp_boss 进入boss房
