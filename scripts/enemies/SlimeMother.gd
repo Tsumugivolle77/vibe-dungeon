@@ -22,8 +22,11 @@ func _on_ready_extra():
 	super()
 
 func _boss_ai(delta: float):
-	# Gentle drift toward the player
-	if is_instance_valid(player) and distance_to_player() > 120.0:
+	var still := _player_stationary()
+	# Drift toward the player; if they're standing still, close all the way in to
+	# body-slam them for contact damage instead of stopping at range.
+	var stop_dist := 40.0 if still else 120.0
+	if is_instance_valid(player) and distance_to_player() > stop_dist:
 		navigate_to(player.global_position, delta)
 	else:
 		velocity = Vector2.ZERO
@@ -31,8 +34,8 @@ func _boss_ai(delta: float):
 	if action_timer > 0.0:
 		return
 
-	# Point-blank: favour a melee leap-slam over lobbing rings.
-	if distance_to_player() < 95.0 and randf() < 0.6:
+	# Point-blank OR the player is standing still → favour a melee leap-slam.
+	if (distance_to_player() < 95.0 or still) and randf() < (0.7 if still else 0.6):
 		action_timer = 2.6
 		_slam_leap()
 		return

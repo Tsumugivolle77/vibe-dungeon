@@ -23,6 +23,10 @@ func _get_pixel_texture(): return PixelArt.make_mandrake()
 func _is_boss_type() -> bool:
 	return true
 
+# DoT (true damage during invuln) refreshes the boss HP bar.
+func _on_hp_changed_external():
+	emit_signal("boss_hp_changed", hp, max_hp)
+
 # Touching the giant flower hurts (boss contact damage).
 func _mandrake_contact(delta: float):
 	if _contact_cd > 0.0:

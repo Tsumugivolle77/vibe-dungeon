@@ -341,8 +341,8 @@ func _fire_laser(props: Dictionary, dmg: float):
 	var endp: Vector2 = hit.position if hit else origin + dir * max_len
 	var beam_len := origin.distance_to(endp)
 
-	# Wide beam: anything within this perpendicular distance of the ray is hit.
-	var beam_half_w := 30.0
+	# Wide beam (×3): anything within this perpendicular distance of the ray is hit.
+	var beam_half_w := 90.0
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(e):
 			continue
@@ -363,7 +363,7 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 	var glow := Line2D.new()                      # soft wide outer glow
 	glow.add_point(from)
 	glow.add_point(to)
-	glow.width = 22.0
+	glow.width = 66.0
 	glow.default_color = Color(col.r, col.g, col.b, 0.25)
 	glow.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	glow.end_cap_mode   = Line2D.LINE_CAP_ROUND
@@ -371,7 +371,7 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 	var beam := Line2D.new()
 	beam.add_point(from)
 	beam.add_point(to)
-	beam.width = 12.0
+	beam.width = 36.0
 	beam.default_color = col
 	beam.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	beam.end_cap_mode   = Line2D.LINE_CAP_ROUND
@@ -379,7 +379,7 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 	var core := Line2D.new()
 	core.add_point(from)
 	core.add_point(to)
-	core.width = 4.0
+	core.width = 12.0
 	core.default_color = Color(1, 1, 1, 0.95)
 	get_parent().add_child(core)
 	for n: Line2D in [glow, beam, core]:

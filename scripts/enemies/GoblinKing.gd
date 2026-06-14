@@ -29,14 +29,16 @@ func _boss_ai(delta: float):
 		velocity = _charge_dir * 320.0
 		return
 
+	# Always close on the player (so a still player gets body-slammed for contact dmg).
 	if is_instance_valid(player):
 		navigate_to(player.global_position, delta)
 
 	if action_timer > 0.0:
 		return
 
-	# Point-blank: greatly favour a melee leap-smash over ranged patterns.
-	if distance_to_player() < 95.0 and randf() < 0.65:
+	# Point-blank OR the player is standing still → strongly favour a melee leap-smash.
+	var still := _player_stationary()
+	if (distance_to_player() < 95.0 or still) and randf() < (0.8 if still else 0.65):
 		action_timer = 2.0
 		_leap_smash()
 		return

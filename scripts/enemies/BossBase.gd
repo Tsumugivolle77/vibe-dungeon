@@ -61,9 +61,19 @@ func _on_ready_extra():
 	emit_signal("boss_hp_changed", hp, max_hp)
 	emit_signal("boss_armor_changed", armor, max_armor)
 
+# True when the player is essentially standing still — a cue for bosses to press in
+# with melee and try to body-slam them for contact damage.
+func _player_stationary() -> bool:
+	return is_instance_valid(player) and ("velocity" in player) \
+		and player.velocity.length() < 16.0
+
 # Bosses keep the berserk tint as their resting colour after invulnerability ends.
 func _base_tint() -> Color:
 	return _tint()
+
+# DoT (and other external HP changes) refresh the boss HP bar.
+func _on_hp_changed_external():
+	emit_signal("boss_hp_changed", hp, max_hp)
 
 func _tick_ai(delta: float):
 	_tick_contact(delta)   # body contact damage runs even mid-leap (slam)

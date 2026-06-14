@@ -34,8 +34,9 @@ var knockback_vel: Vector2 = Vector2.ZERO
 # Absorbs damage before HP and regenerates like the player's shield. Stays 0 for
 # normal monsters (disabled). Breaking it showers the player with energy; powerful
 # boss casts refill it and grant brief golden-aegis invulnerability.
-const ARMOR_REGEN          = 8.0
-const ARMOR_RECHARGE_DELAY = 2.0
+const ARMOR_REGEN          = 2.0    # 1/4 of the old regen speed
+const ARMOR_RECHARGE_DELAY = 2.0    # delay before regen after a normal hit
+const ARMOR_BREAK_DELAY    = 10.0   # no regen for 10s after the armor is broken
 var max_armor: float    = 0.0
 var armor: float        = 0.0
 var _armor_delay: float = 0.0
@@ -91,16 +92,21 @@ func _absorb_with_armor(amount: float) -> float:
 		_on_armor_broken()
 	return amount - absorbed
 
-# Breaking the boss's armor showers the player with energy ("子弹").
+# Breaking the boss's armor showers the player with energy ("子弹") and locks armor
+# regen for a long window (10s) so the boss stays vulnerable.
 func _on_armor_broken():
+	_armor_delay = ARMOR_BREAK_DELAY
 	for i in 3:
 		var off := Vector2(randf_range(-50, 50), randf_range(-50, 50))
 		Pickup.spawn(get_parent(), global_position + off, Pickup.Type.AMMO_ORB, 16)
 
 # Fills the armor bar and grants brief invulnerability (golden 护体) for a powerful
-# cast — the boss can't be hurt while the aegis is up.
+# cast — the boss can't be hurt while the aegis is up. Only actually triggers ~1/3
+# of the time so the aegis appears at a third of its old frequency.
 func cast_guard(duration: float = 2.5):
 	if max_armor <= 0.0:
+		return
+	if randf() > 0.34:
 		return
 	armor = max_armor
 	_armor_broken = false
@@ -216,9 +222,21 @@ func _tick_status(delta: float):
 			slow_factor = 1.0
 	if dot_timer > 0.0:
 		dot_timer -= delta
-		hp -= dot_damage * delta
-		if hp <= 0.0:
-			_die()
+		take_dot_damage(dot_damage * delta)
+
+# DoT is "true damage": it ignores armor AND boss invulnerability (so damage-over-
+# time keeps ticking through a golden aegis) and still updates the boss HP bar.
+func take_dot_damage(amount: float):
+	if not alive:
+		return
+	hp -= amount
+	_on_hp_changed_external()
+	if hp <= 0.0:
+		_die()
+
+# Hook so bosses refresh their HP bar when HP changes outside take_damage().
+func _on_hp_changed_external():
+	pass
 
 func _tick_ai(_delta: float):
 	pass
