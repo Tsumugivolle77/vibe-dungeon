@@ -12,30 +12,8 @@ var shield_facing: float = 0.0  # Radians, updated each frame
 const RARE_DROPS = ["thunder_bow", "holy_sword", "frozen_gale"]
 func _on_die_extra():
 	if randf() < 0.25:
-		var wid = RARE_DROPS[randi() % RARE_DROPS.size()]
-		var area = Area2D.new()
-		area.add_to_group("weapon_pickup")
-		area.collision_layer = 0
-		area.collision_mask  = 2
-		area.global_position = global_position
-		area.set_meta("weapon_id", wid)
-		var lbl = Label.new()
-		lbl.text = "★ " + WeaponDatabase.get_weapon(wid).get("name", "?")
-		lbl.add_theme_font_size_override("font_size", 11)
-		lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.1))
-		lbl.position = Vector2(-28, -22)
-		area.add_child(lbl)
-		var hint = Label.new()
-		hint.text = "[Enter]"
-		hint.add_theme_font_size_override("font_size", 9)
-		hint.position = Vector2(-14, -34)
-		area.add_child(hint)
-		var col = CollisionShape2D.new()
-		var c   = CircleShape2D.new()
-		c.radius = 20.0
-		col.shape = c
-		area.add_child(col)
-		get_parent().add_child(area)
+		# Use the shared helper so the rare drop lands inside the room, not off-map.
+		spawn_weapon_pickup(RARE_DROPS[randi() % RARE_DROPS.size()])
 
 func _on_ready_extra():
 	max_hp      = 90.0

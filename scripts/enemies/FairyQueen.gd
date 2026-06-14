@@ -50,7 +50,9 @@ func _boss_ai(delta: float):
 			match randi() % 4:
 				0: _spiral_volley()
 				1: _blink()
-				2: summon(FAIRY_SCENE, 2)
+				2:
+					cast_guard(2.4)                  # powerful skill: aegis while summoning
+					summon(FAIRY_SCENE, 2)
 				3: _homing_volley()
 
 # Fires a fan of slow homing orbs that chase the player, then expire.

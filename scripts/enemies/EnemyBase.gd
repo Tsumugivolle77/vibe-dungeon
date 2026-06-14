@@ -2,6 +2,7 @@ extends CharacterBody2D
 class_name EnemyBase
 
 signal died(position: Vector2, xp: int)
+signal boss_armor_changed(armor: float, max_armor: float)
 
 @export var max_hp: float      = 50.0
 @export var move_speed: float  = 80.0
@@ -16,9 +17,119 @@ var is_boss_mode: bool = false
 var boss_scale: float  = 1.8
 var is_elite: bool     = false   # only elite monsters drop energy orbs ("子弹")
 
+# Overall monster damage was raised across the board (CLAUDE batch). Applied to
+# non-boss enemies after their stats are set; bosses tune their own numbers.
+const ENEMY_DAMAGE_MULT = 1.6
+
+# Overridden true by boss scripts so the damage multiplier / generic contact code
+# don't double-apply to them.
+func _is_boss_type() -> bool:
+	return false
+
 var hp: float     = 0.0
 var alive: bool   = true
 var knockback_vel: Vector2 = Vector2.ZERO
+
+# ── Boss armor (护甲) ──────────────────────────────────────────────────────────
+# Absorbs damage before HP and regenerates like the player's shield. Stays 0 for
+# normal monsters (disabled). Breaking it showers the player with energy; powerful
+# boss casts refill it and grant brief golden-aegis invulnerability.
+const ARMOR_REGEN          = 8.0
+const ARMOR_RECHARGE_DELAY = 2.0
+var max_armor: float    = 0.0
+var armor: float        = 0.0
+var _armor_delay: float = 0.0
+var _armor_broken: bool = false
+var invuln: bool        = false
+var _invuln_timer: float = 0.0
+var _enraged: bool      = false   # boss below-half-HP form (swapped enraged sprite)
+
+# Swaps the boss to its enraged below-half-HP sprite (a baked recolor of its art).
+func _swap_to_berserk_sprite():
+	if _enraged or not (sprite is AnimatedSprite2D):
+		return
+	var base_tex := _get_pixel_texture()
+	if base_tex == null:
+		return
+	_enraged = true
+	var asp := sprite as AnimatedSprite2D
+	asp.sprite_frames = PixelArt.make_bob_frames(PixelArt.make_enraged(base_tex))
+	asp.play("idle")
+	asp.modulate = Color.WHITE   # the baked enraged texture now carries the look
+
+# Resting sprite tint restored when invulnerability ends (bosses override).
+func _base_tint() -> Color:
+	return Color.WHITE
+
+func _tick_armor(delta: float):
+	if max_armor <= 0.0:
+		return
+	if _invuln_timer > 0.0:
+		_invuln_timer -= delta
+		if _invuln_timer <= 0.0:
+			invuln = false
+			if is_instance_valid(sprite):
+				sprite.modulate = _base_tint()
+	if _armor_delay > 0.0:
+		_armor_delay -= delta
+	elif armor < max_armor:
+		armor = minf(max_armor, armor + ARMOR_REGEN * delta)
+		if armor > 0.0:
+			_armor_broken = false
+		emit_signal("boss_armor_changed", armor, max_armor)
+
+# Runs incoming damage through armor; returns the overflow that reaches HP.
+func _absorb_with_armor(amount: float) -> float:
+	if max_armor <= 0.0 or armor <= 0.0:
+		return amount
+	_armor_delay = ARMOR_RECHARGE_DELAY
+	var absorbed := minf(armor, amount)
+	armor -= absorbed
+	emit_signal("boss_armor_changed", armor, max_armor)
+	if armor <= 0.0 and not _armor_broken:
+		_armor_broken = true
+		_on_armor_broken()
+	return amount - absorbed
+
+# Breaking the boss's armor showers the player with energy ("子弹").
+func _on_armor_broken():
+	for i in 3:
+		var off := Vector2(randf_range(-50, 50), randf_range(-50, 50))
+		Pickup.spawn(get_parent(), global_position + off, Pickup.Type.AMMO_ORB, 16)
+
+# Fills the armor bar and grants brief invulnerability (golden 护体) for a powerful
+# cast — the boss can't be hurt while the aegis is up.
+func cast_guard(duration: float = 2.5):
+	if max_armor <= 0.0:
+		return
+	armor = max_armor
+	_armor_broken = false
+	emit_signal("boss_armor_changed", armor, max_armor)
+	invuln = true
+	_invuln_timer = duration
+	if is_instance_valid(sprite):
+		sprite.modulate = Color(1.9, 1.6, 0.4)   # golden tint
+	_spawn_aegis(duration)
+
+func _spawn_aegis(duration: float):
+	var aegis := Line2D.new()
+	aegis.width = 4.0
+	aegis.default_color = Color(1.0, 0.85, 0.2, 0.9)
+	aegis.closed = true
+	var rad := body_size.x * 0.9
+	if is_instance_valid(sprite):
+		rad = body_size.x * sprite.scale.x * 0.55
+	var seg := 24
+	for i in seg:
+		var a := TAU * i / seg
+		aegis.add_point(Vector2(cos(a), sin(a)) * rad)
+	aegis.z_index = 3
+	add_child(aegis)
+	var tw := aegis.create_tween().set_loops()
+	tw.tween_property(aegis, "modulate:a", 0.35, 0.2)
+	tw.tween_property(aegis, "modulate:a", 1.0, 0.2)
+	var timer := get_tree().create_timer(duration)
+	timer.timeout.connect(func(): if is_instance_valid(aegis): aegis.queue_free())
 
 # Floating health bar (created lazily on first hit)
 const HP_BAR_W = 32.0
@@ -32,7 +143,7 @@ var dot_damage:  float = 0.0
 var dot_timer:   float = 0.0
 
 var player: Node2D = null
-var sprite: Sprite2D = null  # pixel-art overlay (set when _get_pixel_texture returns a texture)
+var sprite: Node2D = null  # animated pixel-art overlay (AnimatedSprite2D when art exists)
 
 @onready var nav_agent: NavigationAgent2D = $NavigationAgent2D
 @onready var hitbox: Area2D               = $Hitbox
@@ -48,10 +159,15 @@ func _ready():
 	body_rect.size    = body_size
 	body_rect.position = -body_size * 0.5
 
-	# Pixel sprite overlay (sits above the ColorRect fallback)
+	# Animated pixel sprite overlay (2-frame idle bob) above the ColorRect fallback.
 	var tex = _get_pixel_texture()
 	if tex:
-		sprite = PixelArt.sprite_from(tex)
+		var anim := AnimatedSprite2D.new()
+		anim.sprite_frames = PixelArt.make_bob_frames(tex)
+		anim.play("idle")
+		# Desync each monster's bob so a group doesn't pulse in lockstep.
+		anim.frame = randi() % 2
+		sprite = anim
 		sprite.z_index = 1
 		add_child(sprite)
 		body_rect.visible = false  # hide plain rect when we have art
@@ -60,6 +176,9 @@ func _ready():
 		_apply_boss_mode()
 	_find_player()
 	_on_ready_extra()
+	# Raise overall monster damage (non-bosses only; bosses set their own values).
+	if not _is_boss_type() and not is_boss_mode:
+		damage *= ENEMY_DAMAGE_MULT
 
 func _get_pixel_texture() -> ImageTexture:
 	return null  # override in subclass
@@ -127,12 +246,14 @@ func shoot(dir: Vector2, spd: float = 200.0, dmg: float = -1.0, props: Dictionar
 	get_parent().add_child(b)
 	b.global_position = global_position
 	b.direction       = dir.normalized()
-	b.speed           = spd
+	# Small monsters fire slower projectiles (0.8×); bosses keep full speed.
+	b.speed           = spd if _is_boss_type() else spd * 0.8
 	b.damage          = dmg if dmg >= 0 else damage
 	b.is_boss_bullet  = is_boss_mode
 	if props.has("kind"):     b.kind = props["kind"]
 	if props.has("homing"):   b.homing_strength = props["homing"]
 	if props.has("lifetime"): b.lifetime = props["lifetime"]
+	if props.has("bounce"):   b.bounces = props["bounce"]
 
 func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dictionary = {}):
 	if not alive:
@@ -219,13 +340,27 @@ func _die():
 	t.tween_callback(queue_free)
 	_on_die_extra()
 
+# Clamps a world position to inside the room walls. Used for ALL spawns/drops so
+# nothing (loot, summoned minions, split slimes, vines) ever lands off the map.
+func clamp_to_room(pos: Vector2) -> Vector2:
+	var p := get_parent()
+	if p and p.has_method("interior_world_rect"):
+		var r: Rect2 = p.interior_world_rect()
+		return Vector2(
+			clampf(pos.x, r.position.x + 24.0, r.end.x - 24.0),
+			clampf(pos.y, r.position.y + 24.0, r.end.y - 24.0))
+	return pos
+
+func safe_drop_pos() -> Vector2:
+	return clamp_to_room(global_position)
+
 # Spawns an [Enter]-collectable weapon pickup at this enemy's position.
 func spawn_weapon_pickup(wid: String):
 	var area = Area2D.new()
 	area.add_to_group("weapon_pickup")
+	area.add_to_group("weapon_display")
 	area.collision_layer = 0
 	area.collision_mask  = 2
-	area.global_position = global_position
 	area.set_meta("weapon_id", wid)
 	area.add_child(PixelArt.sprite_from(PixelArt.make_weapon_icon(wid)))
 	var lbl = Label.new()
@@ -244,7 +379,10 @@ func spawn_weapon_pickup(wid: String):
 	c.radius = 20.0
 	col.shape = c
 	area.add_child(col)
+	# Add to the tree BEFORE positioning so global_position isn't re-offset by the
+	# room's transform (which previously flung loot far outside the map).
 	get_parent().add_child(area)
+	area.global_position = safe_drop_pos()
 
 func _on_die_extra():
 	pass

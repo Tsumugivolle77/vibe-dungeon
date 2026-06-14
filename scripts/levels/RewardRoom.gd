@@ -5,9 +5,10 @@ class_name RewardRoom
 # Player picks one with [Enter]; the others disappear; doors open immediately.
 
 const CHOICE_COUNT = 3
-const SPREAD_X     = 120.0
+const SPREAD_X     = 96.0
 
 var _choices: Array = []  # Array of Area2D weapon choice nodes
+var _title_lbl: Label = null
 
 func build(spec: Dictionary, sublevel: int):
 	super.build(spec, sublevel)
@@ -20,29 +21,32 @@ func _present_choices():
 	var common_ids = all_ids.filter(func(id): return not WeaponDatabase.get_weapon(id).get("props", {}).get("rare", false))
 	common_ids.shuffle()
 
-	var centre = get_player_start()
+	var centre = get_player_start()   # room-local
 	for i in CHOICE_COUNT:
 		var id = common_ids[i % common_ids.size()]
-		var offset = Vector2((i - 1) * SPREAD_X, -60.0)
+		var offset = Vector2((i - 1) * SPREAD_X, -40.0)
 		var node = _make_choice_node(id, centre + offset)
 		_choices.append(node)
 		add_child(node)
 
 	var lbl = Label.new()
 	lbl.text = "选择一件武器 [Enter]"
-	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_font_size_override("font_size", 18)
 	lbl.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
-	lbl.global_position = centre + Vector2(-120, -130)
+	lbl.position = centre + Vector2(-100, -100)
 	add_child(lbl)
+	_title_lbl = lbl
 
 func _make_choice_node(weapon_id: String, pos: Vector2) -> Area2D:
 	var w = WeaponDatabase.get_weapon(weapon_id)
 	var area = Area2D.new()
 	# NOT in "weapon_pickup" group so Player._try_pickup_weapon() ignores it;
-	# RewardRoom._process owns the full pick-then-cleanup sequence.
+	# RewardRoom._process owns the full pick-then-cleanup sequence. It IS in
+	# "weapon_display" so the HUD shows its stats when the player stands near it.
+	area.add_to_group("weapon_display")
 	area.collision_layer = 0
 	area.collision_mask  = 2
-	area.global_position = pos
+	area.position = pos   # room-local; resolves to correct world pos via room transform
 	area.set_meta("weapon_id", weapon_id)
 
 	var icon_spr = PixelArt.sprite_from(PixelArt.make_weapon_icon(weapon_id))
@@ -103,11 +107,15 @@ func _process(_delta: float):
 	if not chosen_id.is_empty() and player.has_method("pick_up_weapon"):
 		player.pick_up_weapon(chosen_id)
 
-	# Free all choices (including the chosen one) now that pickup is done
+	# Free all choices (including the chosen one) and the prompt text now that the
+	# pickup is done — the reward room's hint should disappear after selection.
 	for c in _choices:
 		if is_instance_valid(c):
 			c.queue_free()
 	_choices.clear()
+	if is_instance_valid(_title_lbl):
+		_title_lbl.queue_free()
+		_title_lbl = null
 
 	cleared = true
 	_unlock_doors()

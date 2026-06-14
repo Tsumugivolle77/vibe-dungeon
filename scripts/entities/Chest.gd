@@ -7,11 +7,19 @@ var _interactable: bool = true
 var _opened: bool       = false
 var _prompt: Label
 var _sprite: Sprite2D
+var guaranteed_weapon: bool = false   # boss chests always contain a weapon
+var forced_weapon: String   = ""      # if set, the chest yields exactly this weapon
+var golden: bool            = false   # golden boss-reward chest
 
 func _ready():
 	add_to_group("interactable")
-	_sprite = PixelArt.sprite_from(PixelArt.make_chest())
+	_sprite = PixelArt.sprite_from(PixelArt.make_chest_gold() if golden else PixelArt.make_chest())
 	add_child(_sprite)
+	if golden:
+		# Gentle golden shimmer so the boss reward chest stands out.
+		var glow := create_tween().set_loops()
+		glow.tween_property(_sprite, "modulate", Color(1.4, 1.25, 0.7), 0.6)
+		glow.tween_property(_sprite, "modulate", Color(1.0, 1.0, 1.0), 0.6)
 
 	_prompt = Label.new()
 	_prompt.text = "[Enter] 打开宝箱"
@@ -75,8 +83,10 @@ func _scatter_contents(_player: Node2D):
 		Pickup.spawn(get_parent(), global_position + Vector2(randf_range(-25,25), 20),
 			Pickup.Type.AMMO_PACK, 0)
 
-	# Random common weapon (30% chance) — never rare/boss-exclusive
-	if randf() < 0.30:
+	# Weapon: a forced (boss-specific) one if set, else guaranteed/30% random common.
+	if forced_weapon != "":
+		_spawn_weapon_pickup(forced_weapon)
+	elif guaranteed_weapon or randf() < 0.30:
 		var ids = WeaponDatabase.get_all_weapon_ids().filter(
 			func(id): return not WeaponDatabase.get_weapon(id).get("props", {}).get("rare", false))
 		_spawn_weapon_pickup(ids[randi() % ids.size()])
@@ -91,7 +101,7 @@ func _scatter_contents(_player: Node2D):
 func _spawn_weapon_pickup(weapon_id: String):
 	var area = Area2D.new()
 	area.add_to_group("weapon_pickup")
-	area.global_position = global_position + Vector2(randf_range(-30, 30), randf_range(-20, 20))
+	area.add_to_group("weapon_display")
 
 	var spr  = PixelArt.sprite_from(PixelArt.make_weapon_icon(weapon_id))
 	area.add_child(spr)
@@ -117,4 +127,6 @@ func _spawn_weapon_pickup(weapon_id: String):
 	area.collision_layer = 0
 	area.collision_mask  = 2
 	area.set_meta("weapon_id", weapon_id)
+	# Add to tree BEFORE positioning so the room transform doesn't fling it off-map.
 	get_parent().add_child(area)
+	area.global_position = global_position + Vector2(randf_range(-30, 30), randf_range(-20, 20))

@@ -11,15 +11,35 @@ var action_timer: float = 0.0
 var laser_active: bool  = false
 var laser_dir: Vector2  = Vector2.RIGHT
 var _drop_timer: float  = 6.0
+var boss_drop_weapon: String = "mandrake_rod"   # delivered via the golden reward chest
 
 const PHASE2_THRESHOLD = 0.5   # berserk at half HP (CLAUDE.md)
 const PHASE3_THRESHOLD = 0.25
 
+var _contact_cd: float = 0.0
+
 func _get_pixel_texture(): return PixelArt.make_mandrake()
 
+func _is_boss_type() -> bool:
+	return true
+
+# Touching the giant flower hurts (boss contact damage).
+func _mandrake_contact(delta: float):
+	if _contact_cd > 0.0:
+		_contact_cd -= delta
+		return
+	var pl = GameManager.player_ref
+	if not is_instance_valid(pl) or not pl.has_method("take_damage"):
+		return
+	if global_position.distance_to(pl.global_position) <= 82.0:
+		pl.take_damage(damage * 0.7)
+		_contact_cd = 0.7
+
 func _on_ready_extra():
-	max_hp      = 1800.0
+	max_hp      = 1800.0 * 1.5   # +50% boss HP (CLAUDE batch)
 	hp          = max_hp
+	max_armor    = float(randi_range(50, 100))   # 护甲条 (50–100)
+	armor        = max_armor
 	move_speed   = 0.0
 	damage      = 20.0
 	xp_value    = 500
@@ -29,10 +49,14 @@ func _on_ready_extra():
 	body_rect.size     = body_size
 	body_rect.position = -body_size * 0.5
 	if sprite:
-		sprite.scale = Vector2(3.0, 3.0)  # final boss: largest body (~4× a normal monster)
+		sprite.scale = Vector2(2.4, 2.4)  # final boss: largest body (~4× a normal monster)
 	action_timer = 1.5
+	emit_signal("boss_hp_changed", hp, max_hp)
+	emit_signal("boss_armor_changed", armor, max_armor)
 
 func _tick_ai(delta: float):
+	_mandrake_contact(delta)
+	_tick_armor(delta)   # armor regen + invulnerability timer
 	# Only spew energy orbs ("子弹") below half HP (CLAUDE.md); none above.
 	if hp < max_hp * 0.5:
 		_drop_timer -= delta
@@ -40,14 +64,19 @@ func _tick_ai(delta: float):
 			_drop_timer = 2.5
 			_boss_drop()
 
-	action_timer -= delta
+	action_timer -= delta * 1.5   # 1.5× attack frequency
 	_check_phase_transition()
 
 	if action_timer <= 0.0:
-		match phase:
-			1: _phase1_action()
-			2: _phase2_action()
-			3: _phase3_action()
+		# Point-blank: favour a close-range poison nova (melee-style retaliation).
+		if is_instance_valid(player) and distance_to_player() < 95.0 and randf() < 0.6:
+			action_timer = 2.0
+			_poison_nova()
+		else:
+			match phase:
+				1: _phase1_action()
+				2: _phase2_action()
+				3: _phase3_action()
 
 	if laser_active:
 		_sweep_laser(delta)
@@ -70,15 +99,15 @@ func _check_phase_transition():
 func _enter_phase(new_phase: int):
 	phase = new_phase
 	emit_signal("boss_phase_changed", phase)
-	# Flash the visible sprite, then keep an angry red berserk tint.
+	# Flash white, then rest on the baked enraged texture (no lingering red tint).
 	var flash_target = sprite if sprite else body_rect
-	var berserk_tint = Color(1.5, 0.6, 0.6)
 	var t = create_tween()
 	t.tween_property(flash_target, "modulate", Color(2.5, 2.5, 2.5), 0.1)
-	t.tween_property(flash_target, "modulate", berserk_tint, 0.2)
+	t.tween_property(flash_target, "modulate", Color.WHITE, 0.2)
 	match phase:
 		2:
-			# 狂暴模式 at half HP — spew a retaliatory bullet ring and speed up.
+			# 狂暴模式 at half HP — swap to the enraged sprite, retaliate, speed up.
+			_swap_to_berserk_sprite()
 			move_speed = 40.0
 			_petal_ring(16)
 		3:
@@ -137,8 +166,10 @@ func _spawn_minion(pos: Vector2):
 	var scene = load(scene_path)
 	if scene:
 		var m = scene.instantiate()
-		m.global_position = pos
+		# Add to the tree BEFORE positioning, then clamp inside the room — otherwise
+		# the room's transform re-offsets it and the minion lands off the map.
 		get_parent().add_child(m)
+		m.global_position = clamp_to_room(pos)
 
 func _vine_sweep():
 	if not is_instance_valid(player):
@@ -167,16 +198,34 @@ func _phase3_action():
 func _teleport_strike():
 	if not is_instance_valid(player):
 		return
+	velocity = Vector2.ZERO
 	var ang := randf() * TAU
 	var dest := player.global_position + Vector2(cos(ang), sin(ang)) * 210.0
 	var vis: CanvasItem = sprite if sprite else body_rect
+
+	# Reaction window: telegraph where the flower will re-emerge before it sinks.
+	var warn := ColorRect.new()
+	warn.color = Color(0.80, 0.20, 0.70, 0.0)
+	warn.size  = Vector2(72, 72)
+	warn.global_position = dest - warn.size * 0.5
+	get_parent().add_child(warn)
+	var pre := warn.create_tween()
+	pre.tween_property(warn, "color:a", 0.55, 0.5)
+	await get_tree().create_timer(0.5).timeout
+	if not is_inside_tree():
+		if is_instance_valid(warn): warn.queue_free()
+		return
+
 	var t := create_tween()
 	t.tween_property(vis, "modulate:a", 0.12, 0.14)
 	t.tween_callback(func(): global_position = dest)
 	t.tween_property(vis, "modulate:a", 1.0, 0.14)
 	await t.finished
+	if is_instance_valid(warn):
+		warn.queue_free()
 	if not is_inside_tree():
 		return
+	action_timer = maxf(action_timer, 1.4)   # post-teleport reaction window
 	for i in 12:
 		var a := TAU * float(i) / 12.0
 		shoot(Vector2(cos(a), sin(a)), 185.0, damage * 0.8, {"kind": "poison"})
@@ -184,6 +233,7 @@ func _teleport_strike():
 func _start_laser_sweep():
 	if not is_instance_valid(player):
 		return
+	cast_guard(2.3)   # powerful skill: full armor + golden aegis
 	laser_active = true
 	laser_dir    = direction_to_player()
 	await get_tree().create_timer(2.0).timeout
@@ -196,6 +246,7 @@ func _sweep_laser(delta: float):
 		shoot(laser_dir.rotated(PI), 420.0, damage * 0.4)
 
 func _rapid_petal_storm():
+	cast_guard(2.0)   # powerful skill: full armor + golden aegis
 	var waves = 8
 	for i in waves:
 		await get_tree().create_timer(0.2).timeout
@@ -203,10 +254,15 @@ func _rapid_petal_storm():
 			return
 		_petal_ring(6 + i)
 
-func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dictionary = {}):
+func take_damage(amount: float, _knockback: Vector2 = Vector2.ZERO, _props: Dictionary = {}):
 	if not alive:
 		return
-	hp -= amount
+	if invuln:
+		return   # golden aegis blocks all damage during powerful casts
+	var dmg := _absorb_with_armor(amount)
+	if dmg <= 0.0:
+		return   # fully soaked by armor
+	hp -= dmg
 	emit_signal("boss_hp_changed", hp, max_hp)
 	var flash_target: CanvasItem = sprite if sprite else body_rect
 	flash_target.modulate = Color(1.8, 0.35, 0.35)
@@ -216,4 +272,4 @@ func take_damage(amount: float, knockback: Vector2 = Vector2.ZERO, _props: Dicti
 		_die()
 
 func _on_die_extra():
-	spawn_weapon_pickup("mandrake_rod")
+	pass   # the 曼陀罗魔杖 is delivered via the golden reward chest (Room)

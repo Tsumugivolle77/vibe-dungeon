@@ -31,6 +31,12 @@ func _boss_ai(delta: float):
 	if action_timer > 0.0:
 		return
 
+	# Point-blank: favour a melee leap-slam over lobbing rings.
+	if distance_to_player() < 95.0 and randf() < 0.6:
+		action_timer = 2.6
+		_slam_leap()
+		return
+
 	match phase:
 		1:
 			action_timer = 2.4
@@ -45,7 +51,9 @@ func _boss_ai(delta: float):
 			action_timer = 2.4
 			match randi() % 4:
 				0: _double_ring()
-				1: ring(16, 180.0, -1.0, randf() * TAU)
+				1:
+					cast_guard(2.5)                           # powerful skill: aegis up
+					ring(16, 180.0, -1.0, randf() * TAU)
 				2: summon(SLIME_SCENE, 4)
 				3: _slam_leap()
 

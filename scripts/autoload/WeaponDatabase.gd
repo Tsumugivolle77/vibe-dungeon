@@ -55,11 +55,11 @@ func _ready():
 	_register_melee ("holy_sword",   "圣剑",      30,  2.8, 105, 90,  3,  {"knockback": 280.0, "element": "holy", "rare": true})
 
 	# ── Boss 专属稀有掉落 (one per boss) ───────────────────────────────────────
-	_register_melee ("kings_greataxe", "哥布林王巨斧", 45, 1.6, 135, 150, 5, {"knockback": 420.0, "rare": true, "boss": true})
-	_register_ranged("slime_burst",    "史莱姆爆弹",   38,  1.0, 300, 3, 30, 2, {"explosive": true, "bouncing": true, "max_bounces": 3, "explosion_radius": 72.0, "rare": true, "boss": true})
-	_register_ranged("treant_staff",   "古树之灵杖",   20,  1.0, 300, 14, 0, 3, {"ring": true, "bouncing": true, "max_bounces": 3, "element": "fire", "rare": true, "boss": true})
-	_register_ranged("fairy_scepter",  "妖精女王杖",   30,  1.4, 380, 6, 0,  3, {"ring": true, "homing": true, "element": "holy", "rare": true, "boss": true})
-	_register_ranged("mandrake_rod",   "曼陀罗魔杖",   45,  0.8, 420, 8, 0,  4, {"ring": true, "explosive": true, "explosion_radius": 60.0, "element": "plasma", "rare": true, "boss": true})
+	_register_melee ("kings_greataxe", "哥布林王巨斧", 45, 1.6, 135, 150, 5, {"knockback": 420.0, "lava_pool": true, "rare": true, "boss": true})
+	_register_ranged("slime_burst",    "史莱姆爆弹",   38,  1.0, 300, 3, 30, 2, {"explosive": true, "bouncing": true, "max_bounces": 3, "explosion_radius": 72.0, "summon_ally": "slime", "summon_chance": 0.2, "rare": true, "boss": true})
+	_register_ranged("treant_staff",   "古树之灵杖",   20,  1.0, 300, 14, 0, 3, {"ring": true, "bouncing": true, "max_bounces": 3, "element": "fire", "summon_ally": "vine", "summon_chance": 0.16, "rare": true, "boss": true})
+	_register_ranged("fairy_scepter",  "妖精女王杖",   30,  1.4, 380, 6, 0,  3, {"ring": true, "homing": true, "element": "holy", "summon_ally": "fairy", "summon_chance": 0.2, "rare": true, "boss": true})
+	_register_ranged("mandrake_rod",   "曼陀罗魔杖",   45,  0.8, 420, 8, 0,  4, {"ring": true, "explosive": true, "explosion_radius": 60.0, "lava_pool": true, "element": "plasma", "rare": true, "boss": true})
 
 func _register_melee(id: String, dname: String, damage: float, fire_rate: float,
 		range_px: float, arc_deg: float, energy_cost: int, props: Dictionary):
@@ -91,6 +91,30 @@ func get_weapon(id: String) -> Dictionary:
 	if weapons.has(id):
 		return weapons[id].duplicate(true)
 	return {}
+
+# A rough power score: sustained output (damage × rate × pellets) plus premiums for
+# special behaviours, energy cost, and rarity. Used to scale shop prices.
+func weapon_power(id: String) -> float:
+	var w = get_weapon(id)
+	if w.is_empty():
+		return 1.0
+	var dps := float(w.get("damage", 10.0)) * float(w.get("fire_rate", 1.0)) \
+		* float(w.get("bullet_count", 1))
+	var p: Dictionary = w.get("props", {})
+	var mult := 1.0
+	if p.get("explosive"): mult += 0.4
+	if p.get("piercing"):  mult += 0.25
+	if p.get("bouncing"):  mult += 0.2
+	if p.get("homing"):    mult += 0.3
+	if p.get("chain"):     mult += 0.3
+	if p.get("laser"):     mult += 0.3
+	if p.get("ring"):      mult += 0.2
+	if p.get("rare"):      mult += 1.0
+	return dps * mult + float(w.get("energy_cost", 0)) * 2.0
+
+# Gold price for a weapon in shops — stronger weapons cost more (clamped).
+func weapon_price(id: String) -> int:
+	return int(clampf(25.0 + weapon_power(id) * 0.55, 30.0, 220.0))
 
 func get_all_weapon_ids() -> Array:
 	return weapons.keys()

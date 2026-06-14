@@ -1,6 +1,7 @@
 extends Node2D
 
 signal boss_hp_changed(hp: float, max_hp: float)
+signal boss_armor_changed(armor: float, max_armor: float)
 
 # A 关卡 (level) is a chain of rooms connected by corridors (roads). The player
 # spawns in a small start room, fights through combat/reward/shop rooms, and ends
@@ -20,9 +21,9 @@ const BOSS_NAMES = {
 
 # Room sizes in tiles (cols × rows). Start room is small & square.
 const ROOM_SIZES = {
-	"v": Vector2i(7, 7),
+	"v": Vector2i(9, 7),
 	"c": Vector2i(13, 9),
-	"r": Vector2i(11, 9),
+	"r": Vector2i(9, 7),
 	"s": Vector2i(13, 9),
 	"b": Vector2i(17, 13),
 }
@@ -65,6 +66,8 @@ func _ready():
 	_spawn_player()
 	if not boss_hp_changed.is_connected(hud._on_boss_hp_changed):
 		boss_hp_changed.connect(hud._on_boss_hp_changed)
+	if not boss_armor_changed.is_connected(hud._on_boss_armor_changed):
+		boss_armor_changed.connect(hud._on_boss_armor_changed)
 	_load_sublevel(1)
 
 func _process(_delta: float):
@@ -465,6 +468,7 @@ func _create_pickup_node(weapon_id: String, pos: Vector2):
 	var w    := WeaponDatabase.get_weapon(weapon_id)
 	var area := Area2D.new()
 	area.add_to_group("weapon_pickup")
+	area.add_to_group("weapon_display")
 	area.add_to_group("level_geometry")
 	area.collision_layer = 0
 	area.collision_mask  = 2
