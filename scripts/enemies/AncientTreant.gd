@@ -5,6 +5,7 @@ extends "res://scripts/enemies/BossBase.gd"
 
 const SPIRIT_SCENE  = "res://scenes/enemies/ForestSpirit.tscn"
 const MUSHROOM_SCENE = "res://scenes/enemies/MushroomMan.tscn"
+const GIANT_VINE_SCENE = "res://scenes/enemies/GiantVine.tscn"
 
 func _get_pixel_texture(): return PixelArt.make_ancient_treant()
 
@@ -35,19 +36,38 @@ func _boss_ai(_delta: float):
 			else:
 				aimed_spread(5, 14.0, 200.0)   # seed volley
 		2:
-			action_timer = 2.8
-			if randi() % 2 == 0:
-				_spiral_seeds()
-			else:
-				summon(SPIRIT_SCENE, 2)
+			action_timer = 2.9
+			match randi() % 4:
+				0: _spiral_seeds()
+				1: summon(SPIRIT_SCENE, 2)
+				2: vine_field(6)                       # vines burst from the ground
+				3: _summon_giant_vines()               # giant vines: contact + bouncing barrage
 		3:
-			action_timer = 2.4
-			match randi() % 3:
+			action_timer = 2.6
+			match randi() % 5:
 				0: _spiral_seeds()
 				1:
 					ring(14, 150.0)
 					ring(14, 200.0, -1.0, deg_to_rad(12.0))
 				2: summon(MUSHROOM_SCENE, 2)
+				3:
+					cast_guard(2.6)                    # powerful skill: aegis up
+					vine_field(11)                     # dense vine field, few safe gaps
+				4: _summon_giant_vines()
+
+# Raises giant vines near the player; each has contact damage and fires a ring of
+# wall-bouncing bullets centred on itself.
+func _summon_giant_vines():
+	var scene = load(GIANT_VINE_SCENE)
+	if not scene:
+		return
+	cast_guard(2.4)   # powerful skill: full armor + golden aegis while summoning
+	var count := 1 if phase < 3 else 2
+	var base: Vector2 = player.global_position if is_instance_valid(player) else global_position
+	for i in count:
+		var v = scene.instantiate()
+		get_parent().add_child(v)   # add first so the room transform is applied
+		v.global_position = clamp_to_room(base + Vector2(randf_range(-170, 170), randf_range(-120, 120)))
 
 func _spiral_seeds():
 	for i in 12:

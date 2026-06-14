@@ -26,7 +26,7 @@ func _break():
 	set_deferred("collision_layer", 0)
 	# drops
 	if randf() < 0.25:
-		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 15)
+		Pickup.spawn(get_parent(), global_position, Pickup.Type.HEALTH_ORB, 25)
 	if randf() < 0.35:
 		Pickup.spawn(get_parent(), global_position + Vector2(10, 0), Pickup.Type.AMMO_ORB, 10)
 	# break particles

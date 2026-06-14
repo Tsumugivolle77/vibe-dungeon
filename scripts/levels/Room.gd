@@ -16,6 +16,7 @@ var data: Dictionary       = {}
 var doors: Dictionary      = {}   # dir -> StaticBody2D barrier
 var enemies_alive: int     = 0
 var cleared: bool          = false
+var _boss_loot_weapon: String = ""   # the boss's signature weapon, placed in its golden chest
 
 # Wave state (combat rooms)
 var combat_started: bool   = false
@@ -261,10 +262,36 @@ func start_combat():
 	current_wave = 0
 	_spawn_next_wave()
 
+# Per-type spawn cost ("权值"): stronger monsters cost more of the wave budget, so
+# elites/golems show up only a few at a time (CLAUDE: weight 15, budget 60 → ≤4).
+const ENEMY_COST = {
+	"goblin": 8, "slime": 8, "goblin_archer": 12,
+	"forest_spirit": 12, "tree_monster": 14, "mushroom_man": 12,
+	"elite_goblin": 22, "stone_golem": 26, "vine_creature": 16,
+	"corrupted_fairy": 18,
+}
+
 func _spawn_next_wave():
 	current_wave += 1
 	var pool: Array = SUBLEVEL_POOLS.get(sublevel_idx, SUBLEVEL_POOLS[1])
-	var count = 2 + sublevel_idx + randi() % 2
+
+	# Weighted, budget-based wave composition. The budget is scaled to 50–80% of the
+	# old headcount so waves are smaller, and pricier enemies eat more of it.
+	var budget := (24.0 + float(sublevel_idx) * 12.0) * randf_range(0.5, 0.8)
+	var to_spawn: Array = []
+	var guard := 0
+	while guard < 40:
+		guard += 1
+		var affordable: Array = pool.filter(
+			func(t): return float(ENEMY_COST.get(t, 10)) <= budget)
+		if affordable.is_empty():
+			break
+		var pick: String = affordable[randi() % affordable.size()]
+		to_spawn.append(pick)
+		budget -= float(ENEMY_COST.get(pick, 10))
+	if to_spawn.is_empty():
+		to_spawn.append(pool[randi() % pool.size()])
+	var count := to_spawn.size()
 
 	# Prefer spawn tiles away from the player so monsters never appear on top of them.
 	var spawns: Array = data.spawn_points.duplicate()
@@ -286,7 +313,7 @@ func _spawn_next_wave():
 
 	var spawned = 0
 	for i in min(count, spawns.size()):
-		var enemy_type = pool[randi() % pool.size()]
+		var enemy_type = to_spawn[i]
 		var scene = load(ENEMY_SCENES.get(enemy_type, ""))
 		if not scene:
 			continue
@@ -328,8 +355,11 @@ func start_boss():
 		return
 	var boss = scene.instantiate()
 	boss.died.connect(_on_boss_died)
+	_boss_loot_weapon = boss.boss_drop_weapon if ("boss_drop_weapon" in boss) else ""
 	if boss.has_signal("boss_hp_changed"):
 		boss.boss_hp_changed.connect(func(h, m): get_parent().emit_signal("boss_hp_changed", h, m))
+	if boss.has_signal("boss_armor_changed"):
+		boss.boss_armor_changed.connect(func(a, m): get_parent().emit_signal("boss_armor_changed", a, m))
 	add_child(boss)
 	boss.position = RoomGenerator.tile_to_world(data.center)  # room-local centre
 	enemies_alive = 1
@@ -337,14 +367,21 @@ func start_boss():
 func _on_boss_died(_pos: Vector2, _xp: int):
 	cleared = true
 	_unlock_doors()
+	# Boss reward: a GOLDEN chest holding the boss's signature weapon, placed BELOW
+	# the centre so it never overlaps the exit portal Level spawns at the centre.
+	_spawn_chest(true, Vector2(0, 104), _boss_loot_weapon, true)
 	emit_signal("all_enemies_dead")
 
 # ── Chest ─────────────────────────────────────────────────────────────────────
 
-func _spawn_chest():
+func _spawn_chest(guaranteed_weapon: bool = false, offset: Vector2 = Vector2(0, -20),
+		forced_weapon: String = "", golden: bool = false):
 	var chest = _chest_scene.instantiate()
+	chest.guaranteed_weapon = guaranteed_weapon
+	chest.forced_weapon = forced_weapon
+	chest.golden = golden
 	add_child(chest)
-	chest.position = RoomGenerator.tile_to_world(data.center) + Vector2(0, -20)  # room-local
+	chest.position = RoomGenerator.tile_to_world(data.center) + offset  # room-local
 
 # ── Queries ───────────────────────────────────────────────────────────────────
 

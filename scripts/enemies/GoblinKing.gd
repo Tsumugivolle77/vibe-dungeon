@@ -29,17 +29,25 @@ func _boss_ai(delta: float):
 		velocity = _charge_dir * 320.0
 		return
 
+	# Always close on the player (so a still player gets body-slammed for contact dmg).
 	if is_instance_valid(player):
 		navigate_to(player.global_position, delta)
 
 	if action_timer > 0.0:
 		return
 
+	# Point-blank OR the player is standing still → strongly favour a melee leap-smash.
+	var still := _player_stationary()
+	if (distance_to_player() < 95.0 or still) and randf() < (0.8 if still else 0.65):
+		action_timer = 2.0
+		_leap_smash()
+		return
+
 	match phase:
 		1:
-			action_timer = 2.2
-			if randi() % 3 == 0:
-				meteor(player.global_position, 0.9, 60.0, 18.0)   # single meteor
+			action_timer = 2.4
+			if randi() % 2 == 0:
+				meteor_storm(3, 150.0, 110.0)                     # a volley of falling meteors
 			else:
 				aimed_spread(3, 14.0, 240.0)                      # axe throw
 		2:
@@ -47,14 +55,25 @@ func _boss_ai(delta: float):
 			match randi() % 3:
 				0: _charge()
 				1: aimed_spread(5, 12.0, 260.0)
-				2: meteor_storm(6)                                # berserk: meteor rain
+				2:
+					cast_guard(2.8)                           # powerful skill: aegis up
+					meteor_storm(6)                           # berserk: meteor rain
 		3:
 			action_timer = 2.8
-			match randi() % 4:
+			match randi() % 5:
 				0: _charge()
 				1: ring(10, 220.0)
 				2: summon(GOBLIN_SCENE, 3)
-				3: meteor_storm(14)                               # mass meteors, few safe spots
+				3:
+					cast_guard(3.0)                           # ultimate: aegis up
+					meteor_storm(14)                          # mass meteors, few safe spots
+				4: _leap_smash()                                  # jump onto the player, slam
+
+# Leaps directly onto the player and slams the ground (distinct from the dash).
+func _leap_smash():
+	if not is_instance_valid(player):
+		return
+	leap_to(player.global_position, 12, 230.0, damage * 1.2)
 
 func _on_phase(p: int):
 	if p == 2:

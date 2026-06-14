@@ -8,6 +8,7 @@ var is_boss_bullet: bool = false
 # For homing boss bullets
 var homing_strength: float = 0.0
 var kind: String = "normal"   # "normal"/"sniper"/"laser"/"poison"/"homing"
+var bounces: int = 0          # wall ricochets remaining (for bouncing barrages)
 var _age: float = 0.0
 
 func _ready():
@@ -20,23 +21,27 @@ func _apply_kind():
 	match kind:
 		"sniper":
 			$Visual.color    = Color(0.45, 0.9, 1.0)
-			$Visual.size     = Vector2(20, 5)
-			$Visual.position = Vector2(-10, -2.5)
+			$Visual.size     = Vector2(26, 6)
+			$Visual.position = Vector2(-13, -3)
 			rotation = direction.angle()
+			$CollisionShape2D.scale = Vector2(1.3, 1.3)
 		"laser":
 			$Visual.color    = Color(1.0, 0.25, 0.85)
-			$Visual.size     = Vector2(30, 4)
-			$Visual.position = Vector2(-15, -2)
+			$Visual.size     = Vector2(40, 7)
+			$Visual.position = Vector2(-20, -3.5)
 			rotation = direction.angle()
+			$CollisionShape2D.scale = Vector2(1.9, 1.9)   # wide laser trajectory
 		"poison":
 			$Visual.color    = Color(0.45, 0.85, 0.2)
-			$Visual.size     = Vector2(14, 14)
-			$Visual.position = Vector2(-7, -7)
+			$Visual.size     = Vector2(18, 18)
+			$Visual.position = Vector2(-9, -9)
+			$CollisionShape2D.scale = Vector2(1.5, 1.5)
 		_:
 			if is_boss_bullet:
 				$Visual.color    = Color(1.0, 0.2, 0.8)
-				$Visual.size     = Vector2(14, 14)
-				$Visual.position = Vector2(-7, -7)
+				$Visual.size     = Vector2(18, 18)
+				$Visual.position = Vector2(-9, -9)
+				$CollisionShape2D.scale = Vector2(1.6, 1.6)
 
 func _process(delta: float):
 	_age += delta
@@ -64,4 +69,18 @@ func _on_body(body: Node2D):
 		queue_free()
 		return
 	if body is StaticBody2D:
+		if bounces > 0:
+			# Reflect off the wall (axis-aligned tiles): snap the normal to an axis.
+			var n: Vector2 = global_position - body.global_position
+			if absf(n.x) >= absf(n.y):
+				n = Vector2(signf(n.x), 0.0)
+			else:
+				n = Vector2(0.0, signf(n.y))
+			if n == Vector2.ZERO:
+				n = -direction
+			direction = direction.bounce(n).normalized()
+			rotation = direction.angle()
+			bounces -= 1
+			position += direction * 6.0   # nudge clear of the wall
+			return
 		queue_free()

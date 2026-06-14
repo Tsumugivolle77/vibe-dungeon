@@ -173,29 +173,36 @@ const SPR_FAIRY = [
 ]
 
 const PAL_MANDRAKE = {
-	"M": Color(0.78, 0.18, 0.60),
-	"m": Color(0.55, 0.10, 0.42),
-	"G": Color(0.20, 0.65, 0.18),
-	"g": Color(0.14, 0.48, 0.12),
-	"E": Color(0.95, 0.92, 0.20),
-	"P": Color(0.90, 0.35, 0.75),
-	"W": Color(0.98, 0.95, 0.98),
+	"M": Color(0.80, 0.20, 0.62),   # magenta petal
+	"m": Color(0.55, 0.10, 0.42),   # petal shadow
+	"P": Color(0.94, 0.42, 0.80),   # petal highlight
+	"G": Color(0.22, 0.65, 0.20),   # leaf
+	"g": Color(0.14, 0.48, 0.12),   # leaf shadow
+	"l": Color(0.42, 0.80, 0.30),   # leaf highlight
+	"E": Color(0.98, 0.93, 0.20),   # eye
+	"n": Color(0.45, 0.06, 0.30),   # maw
+	"W": Color(0.99, 0.96, 0.99),   # fang
 	".": Color(0, 0, 0, 0),
 }
 const SPR_MANDRAKE = [
-	"..GgGGgGG...",
-	".GgGGGGGgG..",
-	"GGGGgGGGGGG.",
-	".GGGMMMMMgG.",
-	"..GMMMMMMG..",
-	"..MMEPEPEMM.",
-	"..mMMMMMMMm.",
-	"..MMmMMMmMM.",
-	"..mMMMMMMMm.",
-	"..MMMMMMMM..",
-	"..gMMMMMMg..",
-	"...GGGGGG...",
-	"....GGGG....",
+	"..gGGlGGGlGGg..",
+	".gGGGGGGGGGGGg.",
+	"gGlGGGGGGGGGlGg",
+	".gGGGGGGGGGGGg.",
+	"..mMMMMMMMMMm..",
+	".mMMPPPPPPPMMm.",
+	"mMMPEPPPPPEPMMm",
+	"mMPPPPPPPPPPPMm",
+	"mMMPPPnnnPPPMMm",
+	"mMMPPnWWWnPPMMm",
+	".mMMPPPnPPPMMm.",
+	"..mMMPPPPPMMm..",
+	"...mMMMMMMMm...",
+	"..gGGGGGGGGGg..",
+	".gGlGGGGGGGlGg.",
+	"..gGGGGGGGGGg..",
+	"...gg.....gg...",
+	"..gg.......gg..",
 ]
 
 # ── Goblin Archer ──────────────────────────────────────────────────────────────
@@ -279,106 +286,145 @@ const PAL_VINE = {
 	".": Color(0, 0, 0, 0),
 }
 const SPR_VINE = [
-	"V..vVv..V.",
-	".V.VVV.V..",
-	"..VVVVV...",
-	".vVCCCVv..",
-	".VCCECCV..",
-	".vVCCCVv..",
-	"..VVVVV...",
-	".V.VVV.V..",
-	"V..vVv..V.",
+	"V..vVv..V",
+	".V.VVV.V.",
+	"..VVVVV..",
+	".vVCCCVv.",
+	".VCCECCV.",
+	".vVCCCVv.",
+	"..VVVVV..",
+	".V.VVV.V.",
+	"V..vVv..V",
+]
+# Tall, writhing vine summoned by the Treant (symmetric so it reads as a column).
+const SPR_GIANT_VINE = [
+	"...vVv...",
+	"..vVVVv..",
+	".vVCCCVv.",
+	".VCEECV..",
+	".vVCCCVv.",
+	"..vVVVv..",
+	"...VVV...",
+	"..vVVVv..",
+	".vVVVVVv.",
+	"..vVVVv..",
+	"...VVV...",
+	"...vVv...",
+	"..vV.Vv..",
+	".vV...Vv.",
 ]
 
 # ── Boss: Goblin King ─────────────────────────────────────────────────────────
 const PAL_GOBLIN_KING = {
-	"G": Color(0.26, 0.55, 0.20), "g": Color(0.16, 0.38, 0.13),
-	"E": Color(1.00, 0.25, 0.12), "T": Color(0.95, 0.92, 0.80),
-	"C": Color(0.92, 0.74, 0.12), "c": Color(0.70, 0.52, 0.06), "Y": Color(1.00, 0.95, 0.55),
-	"A": Color(0.62, 0.64, 0.70), "a": Color(0.40, 0.42, 0.48), "h": Color(0.80, 0.82, 0.88),
-	"K": Color(0.65, 0.10, 0.12), ".": Color(0, 0, 0, 0),
+	"G": Color(0.30, 0.62, 0.24), "g": Color(0.18, 0.42, 0.15), "l": Color(0.46, 0.78, 0.34),
+	"E": Color(1.00, 0.22, 0.10), "e": Color(1.00, 0.66, 0.30), "n": Color(0.12, 0.30, 0.10),
+	"T": Color(0.95, 0.93, 0.80),
+	"C": Color(0.95, 0.78, 0.12), "c": Color(0.68, 0.50, 0.06), "Y": Color(1.00, 0.96, 0.55),
+	"A": Color(0.62, 0.64, 0.70), "a": Color(0.40, 0.42, 0.48), "h": Color(0.82, 0.84, 0.90),
+	"K": Color(0.68, 0.12, 0.12), "B": Color(0.45, 0.28, 0.10), ".": Color(0, 0, 0, 0),
 }
 const SPR_GOBLIN_KING = [
-	"....C.C.C....",
-	"...CcCYCcC...",
-	"..gGGGGGGGg..",
-	".gGGGGGGGGGg.",
-	".GGEEgGgEEGG.",
-	".GGGGGGGGGGG.",
-	".gGGgTTTgGGg.",
-	"KKAAAAAAAAAKK",
-	"KKAaAhhhAaAKK",
-	"KKAAAAAAAAAKK",
-	".K.gG...Gg.K.",
-	"...GG...GG...",
-	"...gg...gg...",
+	"...C.C.C.C.C...",
+	"..cCCCYCYCCCc..",
+	".cCCCCCCCCCCCc.",
+	".ggGGGGGGGGGgg.",
+	"ggGGGGGGGGGGGgg",
+	"gGGgGGGGGGGgGGg",
+	"gGEeGGGGGGGeEGg",
+	"gGGGGGnGnGGGGGg",
+	".ggTTTnnnTTTgg.",
+	"..glGGGGGGGlg..",
+	"KKAAAAAAAAAAAKK",
+	"KAAAhAAAAAhAAAK",
+	"KAAAAAhhhAAAAAK",
+	"KKAAAAAAAAAAAKK",
+	".BBBBBBYBBBBBB.",
+	".gGGGGGGGGGGGg.",
+	"..GGGg...gGGG..",
+	"..gGGg...gGGg..",
+	"..BBB.....BBB..",
 ]
 
 # ── Boss: Slime Mother ────────────────────────────────────────────────────────
 const PAL_SLIME_MOTHER = {
-	"S": Color(0.30, 0.80, 0.34), "s": Color(0.18, 0.58, 0.22),
-	"E": Color(0.10, 0.25, 0.10), "W": Color(0.95, 0.98, 0.95),
-	"H": Color(0.62, 0.98, 0.64, 0.85), "m": Color(0.12, 0.30, 0.12),
-	"C": Color(0.92, 0.74, 0.12), "c": Color(0.70, 0.52, 0.06), "Y": Color(1.00, 0.95, 0.55),
+	"S": Color(0.32, 0.82, 0.36), "s": Color(0.18, 0.58, 0.22), "l": Color(0.55, 0.95, 0.58),
+	"H": Color(0.65, 0.98, 0.66, 0.80), "E": Color(0.10, 0.25, 0.10), "W": Color(0.96, 0.99, 0.96),
+	"m": Color(0.12, 0.30, 0.12),
+	"C": Color(0.95, 0.78, 0.12), "c": Color(0.68, 0.50, 0.06), "Y": Color(1.00, 0.96, 0.55),
 	".": Color(0, 0, 0, 0),
 }
 const SPR_SLIME_MOTHER = [
-	"....C.C.C....",
-	"...CcCYCcC...",
-	"...SSSSSSS...",
-	"..SSHHHHHSS..",
-	".SSHSSSSSHSS.",
-	"SSSSSSSSSSSSS",
-	"SSEWSSSSSEWSS",
-	"SSSSSmSSSSSSS",
-	"SSSSSSSSSSSSS",
-	".sSSSSSSSSSs.",
-	"..sSSSSSSSs..",
-	"...sssssss...",
+	"...C.C.C.C.C...",
+	"..cCCCYCYCCCc..",
+	"....sSSSSSs....",
+	"..sSSSSSSSSSs..",
+	".sSSlSSSSSlSSs.",
+	"sSSSSSSSSSSSSSs",
+	"sSEWSSSSSSSWESs",
+	"sSSSSSmmmSSSSSs",
+	"sSSSSSSSSSSSSSs",
+	"sSlSSSSSSSSSlSs",
+	"sHSSSSSSSSSSSHs",
+	"sSSSSSSSSSSSSSs",
+	".sSSSSSSSSSSSs.",
+	"..ssSSSSSSSss..",
+	"...sssSSSsss...",
+	".....sssss.....",
 ]
 
 # ── Boss: Ancient Treant ──────────────────────────────────────────────────────
 const PAL_TREANT = {
-	"G": Color(0.22, 0.58, 0.20), "g": Color(0.15, 0.42, 0.14),
-	"T": Color(0.44, 0.29, 0.13), "t": Color(0.30, 0.18, 0.07),
-	"E": Color(1.00, 0.88, 0.22), "M": Color(0.08, 0.04, 0.02),
-	".": Color(0, 0, 0, 0),
+	"G": Color(0.24, 0.60, 0.22), "g": Color(0.15, 0.42, 0.14), "l": Color(0.40, 0.75, 0.30),
+	"T": Color(0.46, 0.30, 0.13), "t": Color(0.30, 0.18, 0.07),
+	"E": Color(1.00, 0.88, 0.22), "M": Color(0.08, 0.04, 0.02), ".": Color(0, 0, 0, 0),
 }
 const SPR_TREANT = [
-	"...gGGGGGGg...",
-	".gGGGGGGGGGGg.",
-	"gGGGgGGGGgGGGg",
-	"gGGGGGGGGGGGGg",
-	".gGGGGGGGGGGg.",
-	"...TtTTTTtT...",
-	"..TTETTTTETT..",
-	"..TtTTMMTTtT..",
-	"..TTTMMMMTTT..",
-	"..TtTMMMMTtT..",
-	"..TTtTTTTtTT..",
-	"...TT....TT...",
-	"..ttt....ttt..",
+	"...gGGGGGGGg...",
+	".gGGlGGGGGlGGg.",
+	"gGGGGGGGGGGGGGg",
+	"gGlGGGGGGGGGlGg",
+	"gGGGGGGGGGGGGGg",
+	".gGGGGGGGGGGGg.",
+	"..tTTTTTTTTTt..",
+	"..TtTTTTTTTtT..",
+	"..TETTTTTTTET..",
+	"..TTTTtttTTTT..",
+	"..TTtMMMMMtTT..",
+	"..TtMMMMMMMtT..",
+	"..TTtMMMMMtTT..",
+	"..TtTTTTTTTtT..",
+	"..tTTTTTTTTTt..",
+	".tTTTTTTTTTTTt.",
+	".ttTTT...TTTtt.",
+	"...ttt...ttt...",
+	"..tt.......tt..",
 ]
 
 # ── Boss: Fairy Queen ─────────────────────────────────────────────────────────
 const PAL_FAIRY_QUEEN = {
-	"P": Color(0.90, 0.30, 0.84), "p": Color(0.66, 0.18, 0.62),
+	"P": Color(0.90, 0.32, 0.84), "p": Color(0.66, 0.18, 0.62),
 	"W": Color(0.96, 0.92, 1.00, 0.80), "E": Color(0.98, 0.95, 0.30),
 	"G": Color(0.55, 0.95, 0.60, 0.55), "m": Color(0.55, 0.10, 0.45),
-	"C": Color(0.92, 0.74, 0.12), "c": Color(0.70, 0.52, 0.06), "Y": Color(1.00, 0.95, 0.55),
+	"F": Color(0.99, 0.90, 0.84),
+	"C": Color(0.95, 0.78, 0.12), "c": Color(0.68, 0.50, 0.06), "Y": Color(1.00, 0.96, 0.55),
 	".": Color(0, 0, 0, 0),
 }
 const SPR_FAIRY_QUEEN = [
-	"....CYC......",
-	"W...CcC...W..",
-	"WW.pPPPp.WW..",
-	"GWPPPPPPPWG..",
-	"GWPEPPPEPWG..",
-	"WWPPPmPPPWW..",
-	"GWpPPPPPpWG..",
-	"GW.pPPPp.WG..",
-	"W...PpP...W..",
-	"....P.P......",
+	"...C.C.C.C.C...",
+	"..cCCCYCYCCCc..",
+	"....ppPPPpp....",
+	"...pPFFFFFPp...",
+	"W..pFEFFFEFp..W",
+	"GW.pFFFmFFFp.WG",
+	"WWpPPPPPPPPPpWW",
+	"GWpPPPPPPPPPpWG",
+	"GWpPPPPPPPPPpWG",
+	"WW.pPPPPPPPp.WW",
+	"...pPPPPPPPp...",
+	"....pPPPPPp....",
+	".....pPPPp.....",
+	"......pPp......",
+	".......P.......",
 ]
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -391,6 +437,7 @@ func make_goblin_archer() -> ImageTexture: return _tex(SPR_ARCHER,   PAL_ARCHER)
 func make_elite_goblin() -> ImageTexture:  return _tex(SPR_ELITE,    PAL_ELITE)
 func make_tree_monster() -> ImageTexture:  return _tex(SPR_TREE_MON, PAL_TREE_MON)
 func make_vine_creature() -> ImageTexture: return _tex(SPR_VINE,     PAL_VINE)
+func make_giant_vine() -> ImageTexture:    return _tex(SPR_GIANT_VINE, PAL_VINE)
 
 func _loli_tex(leg_rows: Array) -> ImageTexture:
 	return _tex(_LOLI_UPPER + leg_rows, PAL_LOLI)
@@ -498,6 +545,26 @@ func make_chest() -> ImageTexture:
 	}
 	return _tex(rows, pal)
 
+# Golden boss-reward chest (same shape, gilded palette).
+func make_chest_gold() -> ImageTexture:
+	var rows = [
+		"AAAAAAAAAA",
+		"AhAAAAAAAA",
+		"LLLLLLLLLL",
+		"LBBBBBBBL",
+		"LBGGGGGBL",
+		"LBBBBBBBL",
+		"LLLLLLLLLL",
+	]
+	var pal = {
+		"A": Color(0.96, 0.80, 0.18),
+		"h": Color(1.00, 0.95, 0.60),
+		"L": Color(0.66, 0.48, 0.06),
+		"B": Color(0.86, 0.68, 0.12),
+		"G": Color(1.00, 0.96, 0.55),
+	}
+	return _tex(rows, pal)
+
 func make_crate() -> ImageTexture:
 	var rows = [
 		"WWWWWWWWWW",
@@ -529,6 +596,29 @@ func make_barrel() -> ImageTexture:
 	var pal = {
 		"R": Color(0.78, 0.16, 0.12),
 		"Y": Color(0.95, 0.85, 0.15),
+		".": Color(0, 0, 0, 0),
+	}
+	return _tex(rows, pal)
+
+func make_vending_machine() -> ImageTexture:
+	var rows = [
+		"MMMMMMMMMM",
+		"MGGGGGGGGM",
+		"MGsGGGGsGM",
+		"MGGGGGGGGM",
+		"MGsGGGGsGM",
+		"MGGGGGGGGM",
+		"MMMMMMMMMM",
+		"MWWWWWWWWM",
+		"MMRMMMMMMM",
+		"MMMMMMMMMM",
+	]
+	var pal = {
+		"M": Color(0.78, 0.20, 0.22),   # red chassis
+		"G": Color(0.30, 0.55, 0.75),   # glass front
+		"s": Color(0.70, 0.85, 0.95),   # glass shine / goods (abstract, no weapon shown)
+		"W": Color(0.92, 0.90, 0.55),   # display panel
+		"R": Color(0.15, 0.15, 0.18),   # dispense slot
 		".": Color(0, 0, 0, 0),
 	}
 	return _tex(rows, pal)
@@ -597,41 +687,75 @@ const WICON_CROSSBOW  = ["WWWWWWWW","...W....","...W....",".WWWWWW.","...W....",
 const WICON_ROCKET    = ["WWWWWWWW","WWWWWWWW","WWWWWWWW","BBBWWWWW","BBBB....",".BBB...."]
 const WICON_BOOMERANG = ["WWWWW...","..WWWWW.",".....WWW","..WWWWW.","WWWWW..."]
 const WICON_LASER     = ["...LLLLL","..LLLLLL","BBLLLLLL","BBLLLLLL","..LLLLLL","...LLLLL"]
+# Extra distinct shapes so visually-similar weapons no longer reuse one icon.
+const WICON_SCYTHE    = ["WWWWW...","WW..WW..","W....W..",".....BW.",".....B..","....B...","...B....","..B....."]
+const WICON_WHIP      = ["WW......","W.WW....","...WW...","....WW..","...WW...","..WW....",".WW.....","WW......"]
+const WICON_SHIELD    = [".WWWWWW.","WWWWWWWW","WWWGGWWW","WWGGGGWW","WWWGGWWW",".WWWWWW.","..WWWW..","...WW..."]
+const WICON_KATANA    = [".......W","......WW",".....WW.","...GWW..","..GWW...",".BBW....","BB......"]
+const WICON_GREATAXE  = ["WWW..WWW","WWWWWWWW","WWW..WWW","...BB...","...BB...","...BB...","...BB..."]
+const WICON_MINIGUN   = ["WWWWWWW.","WWWWWWWW","WWWWWWW.","WWWWWWWW","BBBWWWW.","BBBB....",".BBB...."]
+const WICON_MG        = ["..WWWWWW",".WWWWWWW","WWWWWWWW","BWBWWWWW","BWBBB...","BBBBB...",".BBB...."]
+const WICON_GRENADE   = ["...WWWWW","..WWWWWW",".WWWWWWW","WWBBWWWW","WBBBBW..","WBBBB...",".BBB...."]
+const WICON_FLAME     = ["......FF",".....FFF","WWWWFFF.","WWWWFF..","BBWWF...","BBBB....",".BBB...."]
+const WICON_CANNON    = ["WWWWWWWW","WWWWWWWW","WWWWWWWW","WWWWWWWW","BBBWWWWW","BBBBB...",".BBBB..."]
+const WICON_RAILGUN   = ["WWWWWWWW","GWGWGWGW","WWWWWWWW","BBWWWWWW","BBBB....","BBBBB..."]
 
 func make_weapon_icon(weapon_id: String) -> ImageTexture:
 	var bp = {"W": Color(0.82,0.85,0.90), "G": Color(0.90,0.70,0.10), "B": Color(0.45,0.28,0.10), ".": Color(0,0,0,0)}
 	var gp = {"W": Color(0.62,0.65,0.70), "B": Color(0.28,0.28,0.30), ".": Color(0,0,0,0)}
 	match weapon_id:
-		"short_sword","broadsword","spear","scythe":
+		"short_sword","broadsword":
 			return _tex_p(WICON_SWORD, bp)
+		"spear":
+			return _tex_p(WICON_SPEAR, bp)
+		"scythe":
+			return _tex_p(WICON_SCYTHE, {"W":Color(0.70,0.74,0.80),"B":Color(0.35,0.22,0.08),".":Color(0,0,0,0)})
 		"katana":
-			return _tex_p(WICON_SWORD, {"W":Color(0.78,0.85,0.95),"G":Color(0.80,0.65,0.08),"B":Color(0.38,0.22,0.08),".":Color(0,0,0,0)})
+			return _tex_p(WICON_KATANA, {"W":Color(0.80,0.88,0.96),"G":Color(0.80,0.65,0.08),"B":Color(0.38,0.22,0.08),".":Color(0,0,0,0)})
 		"holy_sword":
 			return _tex_p(WICON_SWORD, {"W":Color(0.98,0.95,0.70),"G":Color(1.0,0.85,0.10),"B":Color(0.60,0.50,0.15),".":Color(0,0,0,0)})
-		"dagger","whip":
+		"dagger":
 			return _tex_p(WICON_DAGGER, bp)
+		"whip":
+			return _tex_p(WICON_WHIP, {"W":Color(0.55,0.34,0.14),".":Color(0,0,0,0)})
 		"dragon_fang":
 			return _tex_p(WICON_DAGGER, {"W":Color(0.90,0.20,0.15),"G":Color(0.85,0.55,0.05),"B":Color(0.25,0.08,0.05),".":Color(0,0,0,0)})
-		"war_hammer","shield_bash":
+		"war_hammer":
 			return _tex_p(WICON_HAMMER, {"W":Color(0.62,0.62,0.65),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
+		"shield_bash":
+			return _tex_p(WICON_SHIELD, {"W":Color(0.62,0.64,0.70),"G":Color(0.85,0.70,0.12),".":Color(0,0,0,0)})
 		"battle_axe":
 			return _tex_p(WICON_AXE, {"W":Color(0.60,0.62,0.65),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
 		"kings_greataxe":
-			return _tex_p(WICON_AXE, {"W":Color(0.95,0.80,0.20),"B":Color(0.55,0.10,0.10),".":Color(0,0,0,0)})
-		"pistol","revolver":
+			return _tex_p(WICON_GREATAXE, {"W":Color(0.95,0.80,0.20),"B":Color(0.55,0.10,0.10),".":Color(0,0,0,0)})
+		"pistol":
 			return _tex_p(WICON_PISTOL, gp)
-		"smg","machine_gun","minigun":
+		"revolver":
+			return _tex_p(WICON_PISTOL, {"W":Color(0.72,0.74,0.78),"B":Color(0.45,0.30,0.14),".":Color(0,0,0,0)})
+		"smg":
 			return _tex_p(WICON_SMG, gp)
-		"shotgun","grenade_launcher":
+		"machine_gun":
+			return _tex_p(WICON_MG, gp)
+		"minigun":
+			return _tex_p(WICON_MINIGUN, {"W":Color(0.50,0.52,0.58),"B":Color(0.28,0.28,0.30),".":Color(0,0,0,0)})
+		"shotgun":
 			return _tex_p(WICON_SHOTGUN, gp)
+		"grenade_launcher":
+			return _tex_p(WICON_GRENADE, {"W":Color(0.55,0.72,0.30),"B":Color(0.30,0.30,0.32),".":Color(0,0,0,0)})
 		"slime_burst":
 			return _tex_p(WICON_SHOTGUN, {"W":Color(0.35,0.85,0.40),"B":Color(0.15,0.45,0.18),".":Color(0,0,0,0)})
-		"sniper","railgun":
+		"sniper":
 			return _tex_p(WICON_SNIPER, gp)
+		"railgun":
+			return _tex_p(WICON_RAILGUN, {"W":Color(0.30,0.85,0.95),"G":Color(0.95,1.0,1.0),"B":Color(0.25,0.25,0.28),".":Color(0,0,0,0)})
 		"crossbow":
 			return _tex_p(WICON_CROSSBOW, {"W":Color(0.65,0.45,0.18),"B":Color(0.38,0.24,0.08),".":Color(0,0,0,0)})
-		"rocket_launcher","flamethrower","cannon":
-			return _tex_p(WICON_ROCKET, {"W":Color(0.45,0.45,0.48),"B":Color(0.32,0.32,0.35),".":Color(0,0,0,0)})
+		"rocket_launcher":
+			return _tex_p(WICON_ROCKET, {"W":Color(0.55,0.45,0.30),"B":Color(0.32,0.32,0.35),".":Color(0,0,0,0)})
+		"cannon":
+			return _tex_p(WICON_CANNON, {"W":Color(0.45,0.45,0.48),"B":Color(0.30,0.20,0.10),".":Color(0,0,0,0)})
+		"flamethrower":
+			return _tex_p(WICON_FLAME, {"W":Color(0.50,0.50,0.54),"F":Color(1.0,0.45,0.10),"B":Color(0.30,0.20,0.10),".":Color(0,0,0,0)})
 		"fire_staff":
 			return _tex_p(WICON_STAFF, {"X":Color(0.95,0.42,0.05),"E":Color(1.0,0.85,0.10),"B":Color(0.45,0.28,0.10),".":Color(0,0,0,0)})
 		"ice_staff","frozen_gale":
@@ -735,3 +859,55 @@ func sprite_from(tex: ImageTexture) -> Sprite2D:
 	var s = Sprite2D.new()
 	s.texture = tex
 	return s
+
+# Builds a 2-frame looping "idle bob" SpriteFrames from a single texture so every
+# monster animates without needing hand-drawn frames: frame B is the art nudged up
+# one art-pixel, giving a gentle breathing/hop motion.
+func make_bob_frames(tex: ImageTexture, fps: float = 3.0) -> SpriteFrames:
+	var sf := SpriteFrames.new()
+	sf.add_animation("idle")
+	sf.set_animation_loop("idle", true)
+	sf.set_animation_speed("idle", fps)
+	sf.add_frame("idle", tex, 1.0)
+	sf.add_frame("idle", _shift_tex(tex, SCALE), 1.0)
+	return sf
+
+# Bakes an "enraged" recolor of a texture (used for a boss's below-half-HP sprite):
+# scorched/darkened body with a hot red-orange shift and brightened highlights, so
+# it reads as a distinct, battle-worn form rather than a simple modulate tint.
+func make_enraged(tex: ImageTexture) -> ImageTexture:
+	var src := tex.get_image()
+	var w := src.get_width()
+	var h := src.get_height()
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var c := src.get_pixel(x, y)
+			if c.a < 0.5:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			var lum := (c.r + c.g + c.b) / 3.0
+			var nc := Color(
+				clampf(c.r * 1.25 + 0.18, 0.0, 1.0),   # push red hot
+				clampf(c.g * 0.50, 0.0, 1.0),          # drain green
+				clampf(c.b * 0.45, 0.0, 1.0),          # drain blue
+				c.a)
+			# Bright spots stay bright (glowing embers/eyes).
+			if lum > 0.72:
+				nc = Color(1.0, clampf(c.g * 0.9 + 0.3, 0.0, 1.0), 0.25, c.a)
+			img.set_pixel(x, y, nc)
+	return ImageTexture.create_from_image(img)
+
+func _shift_tex(tex: ImageTexture, dy: int) -> ImageTexture:
+	var src := tex.get_image()
+	var w := src.get_width()
+	var h := src.get_height()
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		for x in w:
+			var sy := y + dy
+			if sy < h:
+				img.set_pixel(x, y, src.get_pixel(x, sy))
+			else:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+	return ImageTexture.create_from_image(img)

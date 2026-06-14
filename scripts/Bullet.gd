@@ -80,6 +80,18 @@ func _setup_visual():
 
 	$Visual.color = col
 
+	# Collision footprint scales with the projectile class: heavy ordnance (shells,
+	# rockets, void/boss orbs) gets a much larger hitbox; magic orbs a moderate one.
+	var col_scale := 1.0
+	match weapon_id:
+		"cannon", "rocket_launcher", "grenade_launcher", "void_cannon", "slime_burst", "mandrake_rod":
+			col_scale = 2.4
+		"fire_staff", "ice_staff", "lightning_staff", "holy_staff", "boomerang":
+			col_scale = 1.5
+		"sniper", "railgun", "laser_gun":
+			col_scale = 1.25
+	$CollisionShape2D.scale = Vector2(col_scale, col_scale)
+
 func _process(delta: float):
 	_age += delta
 	if _age >= lifetime:
@@ -138,6 +150,10 @@ func _on_area(area: Area2D):
 func _on_body(body: Node2D):
 	if body.is_in_group("crate") and body.has_method("take_damage"):
 		body.take_damage(damage)
+		# Explosive weapons also detonate their own blast on obstacles, not just enemies.
+		if weapon_props.get("explosive"):
+			_explode()
+			return
 		if not weapon_props.get("piercing", false):
 			_destroy()
 		return
@@ -170,8 +186,30 @@ func _apply_special_effects(enemy: Node2D):
 			enemy.apply_slow(props.get("slow_factor", 0.5), 2.0)
 	if props.get("chain"):
 		_chain_lightning(enemy)
+	# Summon a friendly unit on hit (boss weapons): fairy / vine / slime.
+	var ally: String = props.get("summon_ally", "")
+	if ally != "" and randf() < float(props.get("summon_chance", 0.2)):
+		_spawn_ally(ally, enemy.global_position)
+	# Lava pools for non-explosive lava weapons (explosive ones drop it in _explode).
+	if props.get("lava_pool") and not props.get("explosive"):
+		_spawn_lava(global_position)
 	if props.get("explosive"):
 		_explode()
+
+func _spawn_lava(pos: Vector2):
+	if not is_inside_tree():
+		return
+	var lava = load("res://scripts/entities/LavaPool.gd").new()
+	get_parent().add_child(lava)
+	lava.global_position = pos
+
+func _spawn_ally(kind: String, pos: Vector2):
+	if not is_inside_tree():
+		return
+	var ally = load("res://scripts/entities/AllyMinion.gd").new()
+	ally.kind = kind
+	get_parent().add_child(ally)
+	ally.global_position = pos + Vector2(randf_range(-24, 24), randf_range(-24, 24))
 
 func _chain_lightning(origin: Node2D):
 	var range_val: float = weapon_props.get("chain_range", 150.0)
@@ -201,6 +239,9 @@ func _explode():
 	var t = flash.create_tween()
 	t.tween_property(flash, "modulate:a", 0.0, 0.3)
 	t.tween_callback(flash.queue_free)
+	# Lava weapons leave a burning pool at the blast site.
+	if weapon_props.get("lava_pool"):
+		_spawn_lava(global_position)
 	_destroy()
 
 func _destroy():

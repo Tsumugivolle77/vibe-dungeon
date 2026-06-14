@@ -35,8 +35,11 @@ func _on_die_extra():
 	if split_count <= 0:
 		return
 	var slime_scene = load("res://scenes/enemies/Slime.tscn")
+	var spawn_origin := global_position
 	for i in split_count:
 		var mini = slime_scene.instantiate()
 		mini.is_mini = true
-		mini.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
+		# Add to the tree BEFORE positioning, then clamp inside the room — setting
+		# global_position first re-offsets the mini by the room transform (off-map).
 		get_parent().add_child(mini)
+		mini.global_position = clamp_to_room(spawn_origin + Vector2(randf_range(-20, 20), randf_range(-20, 20)))

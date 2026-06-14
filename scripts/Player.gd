@@ -24,7 +24,7 @@ var alive: bool = true
 var invincible: bool = false
 
 # Shield: absorbs damage before HP; regenerates over time (1 per 0.1s = 10/s).
-const MAX_SHIELD            = 10.0
+const MAX_SHIELD            = 15.0
 const SHIELD_REGEN          = 5.0   # per second
 const SHIELD_RECHARGE_DELAY = 1.2    # seconds after a hit before regen resumes
 var shield: float           = MAX_SHIELD
@@ -65,6 +65,9 @@ var _weapon_sprite: Sprite2D = null
 
 func _ready():
 	add_to_group("player")
+	# Ensure the bullet-receiving hitbox is reliably in its group (a scene-set group
+	# can be missed) so enemy bullets register hits on the player body.
+	$PlayerHitbox.add_to_group("player_hitbox")
 	melee_hitbox.monitoring = false
 	GameManager.player_ref = self
 
@@ -178,6 +181,17 @@ func _melee_attack():
 	fire_timer  = 1.0 / weapon.fire_rate
 	_melee_sector_hit()
 	_melee_slash_visual()
+	# Lava-leaving melee weapons (e.g. 哥布林王巨斧) scorch the ground in front.
+	if weapon.get("props", {}).get("lava_pool"):
+		_spawn_melee_lava()
+
+func _spawn_melee_lava():
+	var aim: float = weapon_pivot.rotation
+	var rng: float = weapon.get("range", 80.0)
+	var pos := global_position + Vector2(cos(aim), sin(aim)) * (rng * 0.7)
+	var lava = load("res://scripts/entities/LavaPool.gd").new()
+	get_parent().add_child(lava)
+	lava.global_position = pos
 
 # True fan-shaped (扇形) hit: everything inside the weapon's range AND within the
 # arc half-angle of the aim direction is struck at once — reliable, no sweep gaps.
@@ -327,6 +341,8 @@ func _fire_laser(props: Dictionary, dmg: float):
 	var endp: Vector2 = hit.position if hit else origin + dir * max_len
 	var beam_len := origin.distance_to(endp)
 
+	# Wide beam (×3): anything within this perpendicular distance of the ray is hit.
+	var beam_half_w := 90.0
 	for e in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(e):
 			continue
@@ -334,7 +350,7 @@ func _fire_laser(props: Dictionary, dmg: float):
 		var proj := to_e.dot(dir)
 		if proj < 0.0 or proj > beam_len:
 			continue
-		if (to_e - dir * proj).length() <= 16.0 and e.has_method("take_damage"):
+		if (to_e - dir * proj).length() <= beam_half_w and e.has_method("take_damage"):
 			e.take_damage(dmg, dir * 50.0, props)
 
 	_laser_beam_visual(origin, endp, props.get("element", ""))
@@ -344,10 +360,18 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 	match elem:
 		"plasma": col = Color(0.6, 0.3, 1.0)
 		"fire":   col = Color(1.0, 0.4, 0.1)
+	var glow := Line2D.new()                      # soft wide outer glow
+	glow.add_point(from)
+	glow.add_point(to)
+	glow.width = 66.0
+	glow.default_color = Color(col.r, col.g, col.b, 0.25)
+	glow.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	glow.end_cap_mode   = Line2D.LINE_CAP_ROUND
+	get_parent().add_child(glow)
 	var beam := Line2D.new()
 	beam.add_point(from)
 	beam.add_point(to)
-	beam.width = 6.0
+	beam.width = 36.0
 	beam.default_color = col
 	beam.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	beam.end_cap_mode   = Line2D.LINE_CAP_ROUND
@@ -355,10 +379,10 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 	var core := Line2D.new()
 	core.add_point(from)
 	core.add_point(to)
-	core.width = 2.0
+	core.width = 12.0
 	core.default_color = Color(1, 1, 1, 0.95)
 	get_parent().add_child(core)
-	for n: Line2D in [beam, core]:
+	for n: Line2D in [glow, beam, core]:
 		var tw: Tween = n.create_tween()
 		tw.tween_property(n, "modulate:a", 0.0, 0.14)
 		tw.tween_callback(n.queue_free)
