@@ -1,21 +1,21 @@
-- 继续之前没完成的任务
+# Project
 
-- 近战武器应该能够消除弹幕，这也包含主角蓝量耗尽时的fallback攻击
-- 请检查：精英怪奖励武器当前会刷新在地图外，这不应该发生
-- boss击败后没有掉落宝箱，以及宝箱内应该有的随机武器。
-- 降低随机贩卖机的金钱花费至10。贩卖机应该在起始房间的右上角。贩卖的物品不应该显示。靠近贩卖机才会出现相应文本。
-- 适当调整商店房间的价格，越强力的武器应该有越高昂的价格
-- 武器奖励房间的文本应该在选择武器结束后消失。武器奖励房间的尺寸应该减小。
-- 靠近武器后应该在右下角显示武器的各项词条
-- 添加关卡小地图
-- 添加黄色感叹号标志，提示玩家视野外敌人的位置
-- boss在角色贴脸时应该提高近战类技能的使用概率
-- 给boss添加碰撞伤害
-- 给树妖添加召唤巨型藤蔓的技能：藤蔓也拥有碰撞伤害，并且可以发射以其为中心的弹射弹幕
-- 提高怪物整体的伤害
-- 减少怪物的刷新数量。随机为现在的50%～80%。怪物应该由某个权重生成，例如强力怪物的权值是15，某一波总体的费用是60，那么最多产生4个强力怪物。
+2D Roguelike Bullet Hell
 
-美术：
-- 美化UI。游戏logo、主菜单、暂停界面
-- 继续美化武器的贴图，每种武器应该有独特的外观
-- 给怪物添加多帧的动画
+Engine: Godot 4
+Language: GDScript
+
+Rules:
+- Keep existing architecture
+- Avoid unnecessary refactoring
+- Prefer minimal changes
+- Never remove existing features unless requested
+- In each session, read `TODO.md` before you start
+
+# Constraints
+
+- Do not optimize unrelated code.
+- Do not reformat the project.
+- Do not rename nodes unless necessary.
+- Do not modify save data format.
+- If uncertain, leave TODO comments instead of guessing.
