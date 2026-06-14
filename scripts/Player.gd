@@ -22,6 +22,7 @@ var max_hp: int = 100
 var hp: int     = 100
 var alive: bool = true
 var invincible: bool = false
+var debug_god: bool  = false   # /invincible debug toggle: no damage + infinite energy
 
 # Shield: absorbs damage before HP; regenerates over time (1 per 0.1s = 10/s).
 const MAX_SHIELD            = 15.0
@@ -484,15 +485,20 @@ func _flame_cone_visual(aim: float, rng: float, half: float):
 	tw.tween_property(poly, "modulate:a", 0.0, 0.12)
 	tw.tween_callback(poly.queue_free)
 
-# Holy staff: strike pillars of light onto the (up to) 3 nearest enemies.
+# Holy staff: strike pillars of light onto up to 3 DISTINCT targets, prioritising
+# the ones with the most remaining HP (and spreading across them when enemies < 5).
 func _holy_strike(dmg: float):
 	var enemies := get_tree().get_nodes_in_group("enemy").filter(
 		func(e): return is_instance_valid(e))
-	enemies.sort_custom(func(a, b):
-		return global_position.distance_to(a.global_position) \
-			< global_position.distance_to(b.global_position))
-	for i in min(3, enemies.size()):
+	if enemies.is_empty():
+		return
+	enemies.sort_custom(func(a, b): return _enemy_hp(a) > _enemy_hp(b))
+	var n: int = min(3, enemies.size())
+	for i in n:
 		_holy_beam(enemies[i].global_position, dmg)
+
+func _enemy_hp(e) -> float:
+	return float(e.hp) if (is_instance_valid(e) and "hp" in e) else 0.0
 
 func _holy_beam(pos: Vector2, dmg: float):
 	var radius := 64.0
@@ -633,6 +639,10 @@ func _laser_beam_visual(from: Vector2, to: Vector2, elem: String):
 		tw.tween_callback(n.queue_free)
 
 func _spend_energy(amount: int):
+	if debug_god:
+		energy = MAX_ENERGY   # infinite energy in god mode
+		emit_signal("energy_changed", energy, MAX_ENERGY)
+		return
 	energy = max(0, energy - amount)
 	emit_signal("energy_changed", energy, MAX_ENERGY)
 
@@ -800,7 +810,7 @@ func _tick_timers(delta: float):
 		emit_signal("shield_changed", int(shield), int(MAX_SHIELD))
 
 func take_damage(amount: float):
-	if invincible or not alive:
+	if debug_god or invincible or not alive:
 		return
 	_shield_delay = SHIELD_RECHARGE_DELAY
 	var dmg := float(amount)

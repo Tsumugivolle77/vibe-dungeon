@@ -63,6 +63,7 @@ func _ready():
 	GameManager.game_over.connect(_on_game_over)
 	GameManager.start_game()
 	add_child(pause_menu_scene.instantiate())
+	add_child(load("res://scripts/ui/DebugConsole.gd").new())   # "/" opens debug console
 	_spawn_player()
 	if not boss_hp_changed.is_connected(hud._on_boss_hp_changed):
 		boss_hp_changed.connect(hud._on_boss_hp_changed)

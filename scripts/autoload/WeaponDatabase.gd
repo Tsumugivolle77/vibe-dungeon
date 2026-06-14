@@ -44,12 +44,12 @@ func _ready():
 	_register_ranged("boomerang",       "回旋镖",     25,  1.5, 350, 1,  0,  4,  {"returns": true})
 	_register_ranged("bow",             "弓箭",       35,  1.0, 450, 1,  0,  2,  {"charged": true})
 	_register_ranged("plasma_gun",      "等离子枪",   40,  1.5, 400, 3,  0,  3,  {"bouncing": true, "max_bounces": 2, "element": "plasma", "paralyze_chance": 0.5})
-	_register_ranged("minigun",         "加特林",     20,   15.0,480, 5,  5,  3,  {"windup": true, "windup_time": 1.0})
+	_register_ranged("minigun",         "加特林",     18,   9.0, 480, 5,  24, 2,  {})
 	_register_ranged("railgun",         "轨道炮",     40, 0.3, 900, 1,  0,  10, {"laser": true, "piercing": true, "clear_bullets": true})
 	_register_ranged("holy_staff",      "神圣法杖",   28,  1.4, 250, 8,  16, 5,  {"holy_strike": true, "element": "holy"})
 
 	# ── 稀有精英掉落武器 ──────────────────────────────────────────────────────
-	_register_ranged("star_requiem", "星灭者",     35,  0.7, 250, 5,  0,  10, {"explosive": true, "bouncing": true, "explosion_radius": 100.0})
+	_register_ranged("star_requiem", "星灭者",     35,  0.7, 300, 3,  16, 10, {"homing": true, "explosive": true, "explosion_radius": 100.0})
 	_register_ranged("void_cannon",  "虚空炮",    45, 0.4, 620, 3, 0,  10, {"piercing": true, "explosive": true, "explosion_radius": 150.0, "black_hole": true, "rare": true})
 	_register_ranged("thunder_bow",  "雷鸣弓",    35,  0.9, 580, 3, 12, 4,  {"chain": true, "chain_range": 160.0, "element": "lightning", "thunder_strike": true, "rare": true})
 	_register_ranged("frozen_gale",  "冰霜疾风",  60,  1.0, 300, 1, 22, 3,  {"summon_tornado": true, "element": "ice", "rare": true})
