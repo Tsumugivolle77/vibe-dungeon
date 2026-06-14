@@ -6,7 +6,7 @@ extends "res://scripts/enemies/EnemyBase.gd"
 
 var _shoot_timer: float = 1.0
 var _contact_cd: float  = 0.0
-var _life: float        = 14.0
+var _life: float        = 5.0   # auto-dies after 5s
 
 func _get_pixel_texture(): return PixelArt.make_giant_vine()
 
@@ -14,6 +14,7 @@ func _is_boss_type() -> bool:
 	return true   # summoned hazard: skip the generic non-boss damage multiplier
 
 func _on_ready_extra():
+	add_to_group("giant_vine")   # so the Treant can cap how many are on the field
 	max_hp        = 130.0
 	hp            = max_hp
 	move_speed    = 0.0

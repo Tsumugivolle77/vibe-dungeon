@@ -61,8 +61,13 @@ func _summon_giant_vines():
 	var scene = load(GIANT_VINE_SCENE)
 	if not scene:
 		return
+	# Cap at 3 giant vines on the field at once.
+	var alive_vines := get_tree().get_nodes_in_group("giant_vine").size()
+	var room := 3 - alive_vines
+	if room <= 0:
+		return
 	cast_guard(2.4)   # powerful skill: full armor + golden aegis while summoning
-	var count := 1 if phase < 3 else 2
+	var count: int = min(1 if phase < 3 else 2, room)
 	var base: Vector2 = player.global_position if is_instance_valid(player) else global_position
 	for i in count:
 		var v = scene.instantiate()
