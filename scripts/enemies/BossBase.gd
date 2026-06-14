@@ -90,7 +90,8 @@ func _tick_ai(delta: float):
 			_drop_timer = 2.5
 			_boss_drop()
 
-	action_timer -= delta * ATTACK_RATE   # 1.5× attack frequency
+	# 1.5× attack frequency, halved while frozen/paralysed (bosses aren't fully stunned).
+	action_timer -= delta * ATTACK_RATE * (0.5 if _has_stun() else 1.0)
 
 	var ratio := hp / max_hp
 	if phase == 1 and ratio <= PHASE2_THRESHOLD:

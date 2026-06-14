@@ -740,6 +740,10 @@ func make_weapon_icon(weapon_id: String) -> ImageTexture:
 			return _tex_p(WICON_MINIGUN, {"W":Color(0.50,0.52,0.58),"B":Color(0.28,0.28,0.30),".":Color(0,0,0,0)})
 		"shotgun":
 			return _tex_p(WICON_SHOTGUN, gp)
+		"shotgun_m2":
+			return _tex_p(WICON_SHOTGUN, {"W":Color(0.95,0.62,0.25),"B":Color(0.30,0.20,0.10),".":Color(0,0,0,0)})
+		"shotgun_m3":
+			return _tex_p(WICON_SHOTGUN, {"W":Color(0.55,0.90,0.95),"B":Color(0.20,0.35,0.45),".":Color(0,0,0,0)})
 		"grenade_launcher":
 			return _tex_p(WICON_GRENADE, {"W":Color(0.55,0.72,0.30),"B":Color(0.30,0.30,0.32),".":Color(0,0,0,0)})
 		"slime_burst":

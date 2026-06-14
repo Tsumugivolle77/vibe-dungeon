@@ -232,11 +232,14 @@ func _physics_process(delta: float):
 	_tick_statuses(delta)
 	if not alive:
 		return
-	# Freeze / paralysis: the unit can't act or move while stunned.
+	# Freeze / paralysis: normal monsters can't act or move; bosses only move at half
+	# speed (their attack-rate is also halved in their own _tick_ai).
 	if is_stunned():
 		velocity = Vector2.ZERO
 	else:
 		_tick_ai(delta)
+		if _is_boss_type() and _has_stun():
+			velocity *= 0.5
 	if knockback_vel.length() > 1.0:
 		knockback_vel = knockback_vel.lerp(Vector2.ZERO, delta * 8.0)
 		velocity = knockback_vel
@@ -263,11 +266,17 @@ func apply_status(type: String, duration: float = -1.0):
 	_statuses[type] = entry
 	_refresh_status_icons()
 
-func is_stunned() -> bool:
+# Any freeze/paralysis status currently active (raw).
+func _has_stun() -> bool:
 	for s in STUN_STATUSES:
 		if _statuses.has(s):
 			return true
 	return false
+
+# Normal monsters are fully stunned by freeze/paralysis. Bosses are NOT — they only
+# suffer a 50% slow and 50% attack-frequency reduction (handled where they move/act).
+func is_stunned() -> bool:
+	return _has_stun() and not _is_boss_type()
 
 func _tick_statuses(delta: float):
 	if _statuses.is_empty():

@@ -9,6 +9,7 @@ func _get_pixel_texture(): return PixelArt.make_goblin_archer()
 var fire_timer: float = 0.8
 
 func _on_ready_extra():
+	add_to_group("goblin_archer")   # so GoblinKing can cap how many it summons
 	max_hp     = 30.0
 	hp         = max_hp
 	move_speed  = 70.0

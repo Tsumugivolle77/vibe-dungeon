@@ -54,6 +54,17 @@ const PUNCH_ARC      = 100.0   # degrees
 const PUNCH_COOLDOWN = 0.4
 var _punch_cd: float = 0.0
 
+# Shield bash: a short forward dash + a brief blocking shield that soaks a flat pool.
+const DASH_SPEED     = 520.0
+const DASH_DURATION  = 0.16
+const BLOCK_AMOUNT   = 30.0
+const BLOCK_DURATION = 0.5
+var _dash_timer: float   = 0.0
+var _dash_dir: Vector2   = Vector2.RIGHT
+var _block_shield: float = 0.0
+var _block_timer: float  = 0.0
+var _block_visual: Node2D = null
+
 @onready var weapon_pivot: Node2D     = $WeaponPivot
 @onready var weapon_visual: ColorRect = $WeaponPivot/WeaponVisual
 @onready var melee_hitbox: Area2D    = $WeaponPivot/MeleeHitbox
@@ -101,7 +112,11 @@ func _physics_process(delta: float):
 
 func _move():
 	var dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	velocity = dir * SPEED
+	# Shield-bash dash overrides input briefly.
+	if _dash_timer > 0.0:
+		velocity = _dash_dir * DASH_SPEED
+	else:
+		velocity = dir * SPEED
 	move_and_slide()
 	if _anim_sprite:
 		if dir.length() > 0.1:
@@ -181,9 +196,89 @@ func _melee_attack():
 	fire_timer  = 1.0 / weapon.fire_rate
 	_melee_sector_hit()
 	_melee_slash_visual()
+	var mprops: Dictionary = weapon.get("props", {})
 	# Lava-leaving melee weapons (e.g. 哥布林王巨斧) scorch the ground in front.
-	if weapon.get("props", {}).get("lava_pool"):
+	if mprops.get("lava_pool"):
 		_spawn_melee_lava()
+	# Shield bash: dash forward and raise a blocking shield around the player.
+	if mprops.get("block"):
+		_shield_bash_activate()
+	# Dragon fang: loose three homing dragon bolts that clear bullets in their path.
+	if mprops.get("summon_dragons"):
+		_summon_dragons()
+	# Holy sword: launch a persistent crescent of sword-qi forward.
+	if mprops.get("summon_sword_qi"):
+		_summon_sword_qi()
+
+# ── Shield bash ────────────────────────────────────────────────────────────────
+func _shield_bash_activate():
+	var aim: float = weapon_pivot.rotation
+	_dash_dir   = Vector2(cos(aim), sin(aim))
+	_dash_timer = DASH_DURATION
+	_block_shield = BLOCK_AMOUNT
+	_block_timer  = BLOCK_DURATION
+	_show_block_shield()
+
+# A paladin-style heater shield (blue translucent + gold trim) plus a protective
+# bubble around the player, lasting for the block window.
+func _show_block_shield():
+	if is_instance_valid(_block_visual):
+		_block_visual.queue_free()
+	var holder := Node2D.new()
+	# Protective bubble.
+	var bubble := Polygon2D.new()
+	var bpts := PackedVector2Array()
+	for i in 20:
+		var a := TAU * i / 20.0
+		bpts.append(Vector2(cos(a), sin(a)) * 34.0)
+	bubble.polygon = bpts
+	bubble.color = Color(0.35, 0.6, 1.0, 0.25)
+	holder.add_child(bubble)
+	# Heater (paladin) shield facing the aim direction.
+	var shield_poly := Polygon2D.new()
+	shield_poly.polygon = PackedVector2Array([
+		Vector2(-12, -16), Vector2(12, -16), Vector2(12, 4),
+		Vector2(0, 20), Vector2(-12, 4)])
+	shield_poly.color = Color(0.30, 0.55, 0.95, 0.85)
+	var trim := Line2D.new()
+	trim.points = shield_poly.polygon
+	trim.closed = true
+	trim.width = 2.0
+	trim.default_color = Color(1.0, 0.85, 0.2, 0.9)
+	var cross := Line2D.new()       # gold cross emblem
+	cross.add_point(Vector2(0, -12)); cross.add_point(Vector2(0, 12))
+	cross.width = 2.0
+	cross.default_color = Color(1.0, 0.9, 0.3, 0.9)
+	var cross2 := Line2D.new()
+	cross2.add_point(Vector2(-8, 0)); cross2.add_point(Vector2(8, 0))
+	cross2.width = 2.0
+	cross2.default_color = Color(1.0, 0.9, 0.3, 0.9)
+	var emblem := Node2D.new()
+	emblem.add_child(shield_poly)
+	emblem.add_child(trim)
+	emblem.add_child(cross)
+	emblem.add_child(cross2)
+	emblem.position = _dash_dir * 30.0
+	emblem.rotation = _dash_dir.angle() - PI * 0.5
+	holder.add_child(emblem)
+	add_child(holder)
+	_block_visual = holder
+
+# ── Dragon fang ────────────────────────────────────────────────────────────────
+func _summon_dragons():
+	var aim: float = weapon_pivot.rotation
+	var dmg: float = weapon.damage * (2.0 if skill_active else 1.0) * 0.8
+	for i in 3:
+		var a := aim + deg_to_rad(20.0) * (i - 1)
+		var b: Node = bullet_scene.instantiate()
+		get_parent().add_child(b)
+		b.global_position = global_position + Vector2(cos(a), sin(a)) * 30.0
+		b.direction    = Vector2(cos(a), sin(a))
+		b.speed        = 360.0
+		b.damage       = dmg
+		b.weapon_id    = "dragon_fang"
+		b.weapon_props = {"homing": true, "piercing": true, "lifetime": 5.0,
+			"clear_path": true, "element": "fire"}
 
 func _spawn_melee_lava():
 	var aim: float = weapon_pivot.rotation
@@ -294,6 +389,34 @@ func _fire_ranged(delta: float):
 		fire_timer = 1.0 / weapon.fire_rate
 		return
 
+	# Flamethrower: a continuous fan of fire in front of the player (burn DoT).
+	if props.get("continuous"):
+		_flame_cone(dmg)
+		_spend_energy(cost)
+		fire_timer = 1.0 / weapon.fire_rate
+		return
+
+	# Holy staff: calls down pillars of light on the nearest enemies (AoE + holy DoT).
+	if props.get("holy_strike"):
+		_holy_strike(dmg)
+		_spend_energy(cost)
+		fire_timer = 1.0 / weapon.fire_rate
+		return
+
+	# Shotgun M3: a ring of pellets that expands outward as it advances.
+	if props.get("expanding_ring"):
+		_fire_expanding_ring(dmg, props)
+		_spend_energy(cost)
+		fire_timer = 1.0 / weapon.fire_rate
+		return
+
+	# Frozen Gale: summons a homing ice tornado.
+	if props.get("summon_tornado"):
+		_summon_tornado(dmg)
+		_spend_energy(cost)
+		fire_timer = 1.0 / weapon.fire_rate
+		return
+
 	var base_count: int = weapon.get("bullet_count", 1)
 	var spread: float = deg_to_rad(weapon.get("spread", 0.0))
 	var aim_ang: float = weapon_pivot.rotation
@@ -328,6 +451,116 @@ func _fire_ranged(delta: float):
 	_spend_energy(cost)
 	fire_timer = 1.0 / weapon.fire_rate
 
+# Flamethrower: a forward fan of fire — hits everything in a short cone, applying
+# the burn DoT. Fires fast, so per-tick damage is small.
+func _flame_cone(dmg: float):
+	var aim: float  = weapon_pivot.rotation
+	var rng := 155.0
+	var half := deg_to_rad(54.0) * 0.5
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		var to_e: Vector2 = e.global_position - global_position
+		if to_e.length() > rng or absf(angle_difference(aim, to_e.angle())) > half:
+			continue
+		if e.has_method("take_damage"):
+			e.take_damage(dmg * 0.35)
+		if e.has_method("apply_status"):
+			e.apply_status("burn")
+	_flame_cone_visual(aim, rng, half)
+
+func _flame_cone_visual(aim: float, rng: float, half: float):
+	var poly := Polygon2D.new()
+	var pts := PackedVector2Array([Vector2.ZERO])
+	var steps := 10
+	for i in steps + 1:
+		var a: float = lerp(-half, half, float(i) / steps)
+		pts.append(Vector2(cos(a), sin(a)) * rng * randf_range(0.82, 1.0))
+	poly.polygon = pts
+	poly.color   = Color(1.0, 0.5, 0.12, 0.5) if randf() < 0.5 else Color(1.0, 0.72, 0.18, 0.5)
+	poly.rotation = aim
+	add_child(poly)
+	var tw := poly.create_tween()
+	tw.tween_property(poly, "modulate:a", 0.0, 0.12)
+	tw.tween_callback(poly.queue_free)
+
+# Holy staff: strike pillars of light onto the (up to) 3 nearest enemies.
+func _holy_strike(dmg: float):
+	var enemies := get_tree().get_nodes_in_group("enemy").filter(
+		func(e): return is_instance_valid(e))
+	enemies.sort_custom(func(a, b):
+		return global_position.distance_to(a.global_position) \
+			< global_position.distance_to(b.global_position))
+	for i in min(3, enemies.size()):
+		_holy_beam(enemies[i].global_position, dmg)
+
+func _holy_beam(pos: Vector2, dmg: float):
+	var radius := 64.0
+	for e in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(e):
+			continue
+		if e.global_position.distance_to(pos) <= radius:
+			if e.has_method("take_damage"):
+				e.take_damage(dmg)
+			if e.has_method("apply_status") and randf() < 0.5:
+				e.apply_status("holy")
+	_holy_beam_visual(pos, radius)
+
+func _holy_beam_visual(pos: Vector2, radius: float):
+	var p = get_parent()
+	var column := ColorRect.new()
+	column.color = Color(1.0, 0.97, 0.7, 0.5)
+	column.size  = Vector2(radius * 1.3, 420.0)
+	column.global_position = pos - Vector2(column.size.x * 0.5, column.size.y)
+	p.add_child(column)
+	var ct := column.create_tween()
+	ct.tween_property(column, "modulate:a", 0.0, 0.3)
+	ct.tween_callback(column.queue_free)
+	var ring := ColorRect.new()
+	ring.color = Color(1.0, 0.95, 0.5, 0.6)
+	ring.size  = Vector2(radius * 2.0, radius * 0.8)
+	ring.global_position = pos - ring.size * 0.5
+	p.add_child(ring)
+	var rt := ring.create_tween()
+	rt.tween_property(ring, "modulate:a", 0.0, 0.3)
+	rt.tween_callback(ring.queue_free)
+
+# Shotgun M3: nine pellets arranged in a ring ahead of the player, each angled
+# slightly outward so the ring widens as it travels forward.
+func _fire_expanding_ring(dmg: float, props: Dictionary):
+	var aim: float     = weapon_pivot.rotation
+	var aim_dir := Vector2(cos(aim), sin(aim))
+	var n: int         = weapon.get("bullet_count", 9)
+	var spd: float     = weapon.get("bullet_speed", 320.0)
+	var center := global_position + aim_dir * 26.0
+	for i in n:
+		var th := TAU * float(i) / float(n)
+		var off := Vector2(cos(th), sin(th))
+		var b: Node = bullet_scene.instantiate()
+		get_parent().add_child(b)
+		b.global_position = center + off * 14.0
+		b.direction    = (aim_dir + off * 0.7).normalized()
+		b.speed        = spd
+		b.damage       = dmg
+		b.weapon_id    = "shotgun_m3"
+		b.weapon_props = props.duplicate()
+
+func _summon_tornado(dmg: float):
+	var aim: float = weapon_pivot.rotation
+	var t = load("res://scripts/entities/IceTornado.gd").new()
+	t.damage = dmg
+	t.dir    = Vector2(cos(aim), sin(aim))
+	get_parent().add_child(t)
+	t.global_position = global_position + Vector2(cos(aim), sin(aim)) * 30.0
+
+func _summon_sword_qi():
+	var aim: float = weapon_pivot.rotation
+	var q = load("res://scripts/entities/SwordQi.gd").new()
+	q.damage = weapon.damage * (2.0 if skill_active else 1.0)
+	q.dir    = Vector2(cos(aim), sin(aim))
+	get_parent().add_child(q)
+	q.global_position = global_position + Vector2(cos(aim), sin(aim)) * 36.0
+
 # Hitscan laser: damages every enemy along a ray to the first wall, draws a beam.
 func _fire_laser(props: Dictionary, dmg: float):
 	var aim: float   = weapon_pivot.rotation
@@ -352,6 +585,18 @@ func _fire_laser(props: Dictionary, dmg: float):
 			continue
 		if (to_e - dir * proj).length() <= beam_half_w and e.has_method("take_damage"):
 			e.take_damage(dmg, dir * 50.0, props)
+
+	# Railgun-style beams clear enemy missiles caught in the beam.
+	if props.get("clear_bullets"):
+		for b in get_tree().get_nodes_in_group("enemy_bullet"):
+			if not is_instance_valid(b):
+				continue
+			var to_b: Vector2 = b.global_position - origin
+			var pb := to_b.dot(dir)
+			if pb < 0.0 or pb > beam_len:
+				continue
+			if (to_b - dir * pb).length() <= beam_half_w:
+				b.queue_free()
 
 	_laser_beam_visual(origin, endp, props.get("element", ""))
 
@@ -534,6 +779,15 @@ func _punch_slash_visual(aim: float, half: float):
 func _tick_timers(delta: float):
 	if _punch_cd > 0.0:
 		_punch_cd -= delta
+	if _dash_timer > 0.0:
+		_dash_timer -= delta
+	if _block_timer > 0.0:
+		_block_timer -= delta
+		if _block_timer <= 0.0:
+			_block_shield = 0.0
+			if is_instance_valid(_block_visual):
+				_block_visual.queue_free()
+			_block_visual = null
 	if melee_timer > 0.0:
 		melee_timer -= delta
 		if melee_timer <= 0.0:
@@ -550,7 +804,12 @@ func take_damage(amount: float):
 		return
 	_shield_delay = SHIELD_RECHARGE_DELAY
 	var dmg := float(amount)
-	# Shield soaks damage first; only the overflow reaches HP.
+	# Shield-bash block soaks damage first (flat, brief pool).
+	if _block_shield > 0.0:
+		var blocked := minf(_block_shield, dmg)
+		_block_shield -= blocked
+		dmg -= blocked
+	# Regenerating shield soaks next; only the overflow reaches HP.
 	if shield > 0.0:
 		var absorbed := minf(shield, dmg)
 		shield -= absorbed

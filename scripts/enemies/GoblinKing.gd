@@ -91,8 +91,10 @@ func _meteor_cast(count: int):
 	_casting = false
 	action_timer = 1.0   # brief recovery; free to act before the rocks land
 
-# Summons 2–3 GoblinArchers, one per random room corner.
+# Summons 2–3 GoblinArchers, one per random room corner. Stops once 6+ are alive.
 func _summon_corner_archers():
+	if get_tree().get_nodes_in_group("goblin_archer").size() >= 6:
+		return
 	var scene = load(ARCHER_SCENE)
 	if not scene:
 		return

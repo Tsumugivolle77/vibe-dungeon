@@ -12,20 +12,24 @@ const RADIUS   = 40.0
 # otherwise it's a friendly pool (boss weapons) that burns enemies.
 var target_player: bool    = false
 var lifetime_override: float = -1.0
+var radius_override: float  = -1.0
 
 var _tick: float = 0.0
 var _life: float = LIFETIME
+var _radius: float = RADIUS
 
 func _ready():
 	if lifetime_override > 0.0:
 		_life = lifetime_override
+	if radius_override > 0.0:
+		_radius = radius_override
 	collision_layer = 0
 	collision_mask  = 2 if target_player else 8   # player (layer 2) vs enemy (layer 4)
 	monitoring = true
 	z_index = -1          # under units, above floor
 	var col = CollisionShape2D.new()
 	var c = CircleShape2D.new()
-	c.radius = RADIUS
+	c.radius = _radius
 	col.shape = c
 	add_child(col)
 	_build_visual()
@@ -35,9 +39,9 @@ func _ready():
 	tw.tween_property(self, "scale", Vector2.ONE, 0.2).set_ease(Tween.EASE_OUT)
 
 func _build_visual():
-	var outer = _blob(RADIUS, Color(0.85, 0.28, 0.06, 0.7))
+	var outer = _blob(_radius, Color(0.85, 0.28, 0.06, 0.7))
 	add_child(outer)
-	var inner = _blob(RADIUS * 0.6, Color(1.0, 0.62, 0.12, 0.85))
+	var inner = _blob(_radius * 0.6, Color(1.0, 0.62, 0.12, 0.85))
 	add_child(inner)
 
 func _blob(radius: float, col: Color) -> Polygon2D:
